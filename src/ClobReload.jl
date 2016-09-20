@@ -42,7 +42,7 @@ Given a module name (as a string), returns the list of all files that define
 this module (i.e. the module name + all included files, applied recursively)
 """
 function gather_all_module_files(mod_name::String)
-    mod_path = Base.find_in_node_path("AA", nothing, 1)
+    mod_path = Base.find_in_node_path(mod_name, nothing, 1)
     included_files = Set{String}([mod_path]) # to be filled
     gather(full_path, parse_fun) = 
         cd(dirname(full_path)) do
@@ -68,12 +68,13 @@ function creload(mod_name)
     mod_path = Base.find_in_node_path(mod_name, nothing, 1)
     cd(dirname(mod_path)) do
         real_mod_name, code = parse_module_file(basename(mod_path))
-        eval(eval(real_mod_name), :(begin $(code...) end));
+        eval(eval(Main, real_mod_name), :(begin $(code...) end));
+
         # For areload()
-        
         module_was_loaded!(mod_name)
     end
 end
 
+include("autoreload.jl")
 
 end # module
