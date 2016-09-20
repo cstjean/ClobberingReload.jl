@@ -26,7 +26,7 @@ and please report any issues you encounter.
 ## Clobbering Reload
 
 Julia's `reload(mod)` loads `mod` from scratch, creating a new module object,
-then replaces the old module with the new one. As a consequence:
+then replaces the old module object with the new one. As a consequence:
 
 ```julia
 import A
@@ -37,9 +37,9 @@ st2 = A.SomeType(10)
 typeof(st) == typeof(st2)   # false
 ```
 
-`st` and `st2` are actually of a different type. Functions defined on the
-first `::A.SomeType` will not work on the second, and vice versa. This is
-inconvenient when working interactively.
+`st` and `st2` are actually of a different type, and cannot be equal. Functions
+defined on the first `::A.SomeType` will not work on the second, and vice
+versa. This is inconvenient when working interactively.
 
 `ClobberingReload.creload` solves this problem by never creating a second
 module.  It just evaluates the modified code inside the existing module object,
@@ -58,9 +58,14 @@ typeof(st) == typeof(st2)   # true
 Furthermore, `reload` cannot reload modules imported via `using`, but `creload`
 can.
 
+Notes:
+
+- `creload` will output a lot of redefinition warnings, since it is overwriting existing definitions.
+- Parametric types cannot be _defined_  inside a `creload`ed module. (currently solved on Julia-master by [#17618](https://github.com/JuliaLang/julia/pull/17618), but not on 0.5.0). Using parametric types is fine.
+
 ## Autoreload
 
-In [IJulia](https://github.com/JuliaLang/IJulia.jl), `creload` will be called
+In [IJulia](https://github.com/JuliaLang/IJulia.jl) (Jupyter notebooks), `creload` will be called
 automatically for modules that were imported using `@ausing` or `@aimport`,
 whenever the module's source code has been changed. For example:
 
@@ -80,6 +85,8 @@ println(Bar.life_the_universe())
 >   INFO: Reloading `Bar`
 > 42
 ```
+
+The Julia REPL [does not support automatic calling of code yet](https://github.com/JuliaLang/julia/issues/6445), but you can still trigger the autoreload feature for `@aimport`ed modules by calling `areload()` manually.
 
 ## Dependencies
 
