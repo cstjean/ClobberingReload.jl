@@ -9,14 +9,21 @@ export creload
 function parse_module_file(fname::String)
     try
         mod_expr = open(fname) do f
-            s = readstring(f)
-            parse(s)
+            #s = readstring(f)
+            # parsing a file doesn't yield consistent results for
+            # non-module files, but it works for modules
+            parse(f)
+        end
+        if mod_expr.head == :macrocall
+            # Haven't found a better way of dealing with docstrings
+            # Macrotools punts on them
+            mod_expr = mod_expr.args[3]
         end
 
         @assert(@capture mod_expr module modname_ code__ end)
         return modname, code
     catch e
-        error("Cannot parse $fname; must contain a single module. Exception $e")
+        error("ClobberingReload error: Cannot parse $fname; must contain a single module. Exception $e")
     end
 end
 
@@ -34,7 +41,7 @@ gather_includes(code::Vector) =
     mapreduce(expr->(@match expr begin
         include(fname_) => [fname]
         any_ => []
-    end), vcat, code)
+    end), vcat, vcat(code, [:(1+1)]))
 
 """    gather_all_module_files(mod_name::String)
 
@@ -59,8 +66,6 @@ function gather_all_module_files(mod_name::String)
     return included_files
 end
 
-include("autoreload.jl")
-
 """ `creload(mod_name)` reloads `mod_name` by executing the module code inside
 the **existing** module. So unlike `reload`, `creload` does not create a new
 module objects; it merely clobbers the existing definitions therein. """
@@ -75,5 +80,7 @@ function creload(mod_name)
         module_was_loaded!(mod_name)
     end
 end
+
+include("autoreload.jl")
 
 end # module
