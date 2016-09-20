@@ -52,6 +52,7 @@ macro ausing(mod_sym::Symbol)
         using $mod_sym
         $ClobberingReload.module_was_loaded!($(string(mod_sym)))
         $ClobberingReload.register_hook!()
+        $mod_sym
     end))
 end
 
@@ -62,6 +63,7 @@ macro aimport(mod_sym::Symbol)
         import $mod_sym
         $ClobberingReload.module_was_loaded!($(string(mod_sym)))
         $ClobberingReload.register_hook!()
+        $mod_sym
     end))
 end
 

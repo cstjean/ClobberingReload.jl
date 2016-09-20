@@ -7,35 +7,40 @@ export creload
 """ `parse_module_file(fname)` parses the file named `fname` as a module file
 (i.e. `module X ... end`) and returns `(module_name, code::Vector)`. """
 function parse_module_file(fname::String)
-    try
-        mod_expr = open(fname) do f
-            #s = readstring(f)
-            # parsing a file doesn't yield consistent results for
-            # non-module files, but it works for modules
-            parse(f)
+    code = parse_file(fname)
+    doc_mac = GlobalRef(Core, Symbol("@doc"))  # @doc head
+    for expr in code
+        # Skip the docstring. It's unfortunate that MacroTools doesn't seem
+        # to work here.
+        if isa(expr, Expr) && expr.head==:macrocall && expr.args[1] == doc_mac
+            expr = expr.args[3]
         end
-        if mod_expr.head == :macrocall
-            # Haven't found a better way of dealing with docstrings
-            # Macrotools punts on them
-            mod_expr = mod_expr.args[3]
+        if (@capture expr module modname_ code__ end)
+            return modname, code
         end
-
-        @assert(@capture mod_expr module modname_ code__ end)
-        return modname, code
-    catch e
-        error("ClobberingReload error: Cannot parse $fname; must contain a single module. Exception $e")
     end
+    error("ClobberingReload error: Cannot parse $fname; must contain a module. Exception $e")
 end
 
-""" `parse_included_file(filename)` returns the expressions in `filename` as a
+""" `parse_file(filename)` returns the expressions in `filename` as a
 `Vector` of expressions """
-function parse_included_file(filename)
-    # From Autoreload.jl
-    source = string("begin\n", open(filename) do f; readstring(f) end, "\n end")
-    parsed = parse(source)
-    @assert(@capture parsed begin code__ end)
-    return code
+function parse_file(filename)
+    str = readstring(filename)
+    exprs = Any[]
+    pos = 1
+    while pos <= endof(str)
+        ex, pos = parse(str, pos)
+        push!(exprs, ex)
+    end
+    return exprs
 end
+## function parse_file(filename)
+##     # From Autoreload.jl
+##     source = string("begin\n", open(filename) do f; readstring(f) end, "\n end")
+##     parsed = parse(source)
+##     @assert(@capture parsed begin code__ end)
+##     return code
+## end
 
 gather_includes(code::Vector) = 
     mapreduce(expr->(@match expr begin
@@ -59,7 +64,7 @@ function gather_all_module_files(mod_name::String)
     function rec(path::String)
         if !(path in included_files)
             push!(included_files, path)
-            map(rec, gather(path, parse_included_file))
+            map(rec, gather(path, parse_file))
         end
     end
     map(rec, gather(mod_path, mod->parse_module_file(mod)[2]))
