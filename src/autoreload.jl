@@ -1,3 +1,5 @@
+import IJulia
+
 export areload, @ausing, @aimport
 
 
@@ -5,7 +7,7 @@ hook_registered = false
 function register_hook!() # for IJulia
     if !hook_registered
         global hook_registered = true
-        IJulia.push_preexecute_hook(autoreload)
+        IJulia.push_preexecute_hook(areload)
     end
 end
 
@@ -48,8 +50,8 @@ macro ausing(mod_sym::Symbol)
     # register the module file for reloading
     esc(:(begin
         using $mod_sym
-        module_was_loaded!($(string(mod_sym)))
-        register_hook!()
+        $ClobReload.module_was_loaded!($(string(mod_sym)))
+        $ClobReload.register_hook!()
     end))
 end
 
@@ -58,8 +60,8 @@ macro aimport(mod_sym::Symbol)
     # register the module file for reloading
     esc(:(begin
         import $mod_sym
-        module_was_loaded!($(string(mod_sym)))
-        register_hook!()
+        $ClobReload.module_was_loaded!($(string(mod_sym)))
+        $ClobReload.register_hook!()
     end))
 end
 

@@ -59,6 +59,7 @@ function gather_all_module_files(mod_name::String)
     return included_files
 end
 
+include("autoreload.jl")
 
 """ `creload(mod_name)` reloads `mod_name` by executing the module code inside
 the **existing** module. So unlike `reload`, `creload` does not create a new
@@ -74,7 +75,5 @@ function creload(mod_name)
         module_was_loaded!(mod_name)
     end
 end
-
-include("autoreload.jl")
 
 end # module
