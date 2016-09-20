@@ -4,8 +4,21 @@ using MacroTools
 
 export creload
 
+""" `parse_file(filename)` returns the expressions in `filename` as a
+`Vector` of expressions """
+function parse_file(filename)
+    str = readstring(filename)
+    exprs = Any[]
+    pos = 1
+    while pos <= endof(str)
+        ex, pos = parse(str, pos)
+        push!(exprs, ex)
+    end
+    return exprs
+end
+
 """ `parse_module_file(fname)` parses the file named `fname` as a module file
-(i.e. `module X ... end`) and returns `(module_name, code::Vector)`. """
+(i.e. `module X ... end`) and returns `(module_name, module_code::Vector)`. """
 function parse_module_file(fname::String)
     code = parse_file(fname)
     doc_mac = GlobalRef(Core, Symbol("@doc"))  # @doc head
@@ -21,26 +34,6 @@ function parse_module_file(fname::String)
     end
     error("ClobberingReload error: Cannot parse $fname; must contain a module. Exception $e")
 end
-
-""" `parse_file(filename)` returns the expressions in `filename` as a
-`Vector` of expressions """
-function parse_file(filename)
-    str = readstring(filename)
-    exprs = Any[]
-    pos = 1
-    while pos <= endof(str)
-        ex, pos = parse(str, pos)
-        push!(exprs, ex)
-    end
-    return exprs
-end
-## function parse_file(filename)
-##     # From Autoreload.jl
-##     source = string("begin\n", open(filename) do f; readstring(f) end, "\n end")
-##     parsed = parse(source)
-##     @assert(@capture parsed begin code__ end)
-##     return code
-## end
 
 gather_includes(code::Vector) = 
     mapreduce(expr->(@match expr begin
