@@ -42,9 +42,9 @@ typeof(st) == typeof(st2)   # false
 first `A.SomeType` will not work on the second, and vice versa. This is
 inconvenient when working interactively.
 
-`ClobberingReload` solves this problem by never creating a second module.
-It just evaluates the modified code inside the existing module object,
-replacing the previous definitions. Types are left as is.
+`ClobberingReload` solves this problem by never creating a second module.  It
+just evaluates the modified code inside the existing module object, replacing
+the previous definitions. 
 
 ```julia
 using ClobberingReload
