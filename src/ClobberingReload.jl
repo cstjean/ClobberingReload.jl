@@ -1,4 +1,4 @@
-module ClobReload
+module ClobberingReload
 
 using MacroTools
 

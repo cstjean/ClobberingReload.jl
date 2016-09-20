@@ -50,8 +50,8 @@ macro ausing(mod_sym::Symbol)
     # register the module file for reloading
     esc(:(begin
         using $mod_sym
-        $ClobReload.module_was_loaded!($(string(mod_sym)))
-        $ClobReload.register_hook!()
+        $ClobberingReload.module_was_loaded!($(string(mod_sym)))
+        $ClobberingReload.register_hook!()
     end))
 end
 
@@ -60,8 +60,8 @@ macro aimport(mod_sym::Symbol)
     # register the module file for reloading
     esc(:(begin
         import $mod_sym
-        $ClobReload.module_was_loaded!($(string(mod_sym)))
-        $ClobReload.register_hook!()
+        $ClobberingReload.module_was_loaded!($(string(mod_sym)))
+        $ClobberingReload.register_hook!()
     end))
 end
 
