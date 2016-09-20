@@ -1,4 +1,4 @@
-using ClobReload
+using ClobberingReload
 using Base.Test
 
 cp("F1.jl", "F.jl", remove_destination=true)
