@@ -8,9 +8,10 @@
 
 ClobberingReload provides a `reload` alternative that may be more convenient
 for your workflow, as well as functionality for automatically reloading
-modified modules. It is a direct successor to **@malmaud**'s Autoreload.jl
+modified modules. It is a direct successor to **@malmaud**'s
+[Autoreload.jl](https://github.com/malmaud/Autoreload.jl)
 (in fact, it aims to be a straight replacement), and borrows ideas from
-`atom-julia-client`
+[atom-julia-client](https://github.com/JunoLab/atom-julia-client)
 
 ## Installation
 
