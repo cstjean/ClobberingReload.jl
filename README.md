@@ -61,4 +61,27 @@ works fine.
 ## Autoreload
 
 In [IJulia](https://github.com/JuliaLang/IJulia.jl), `creload` will be called
-automatically for modules that were imported using `@ausing` or `@aimport`
+automatically for modules that were imported using `@ausing` or `@aimport`,
+whenever the module's source has been changed.
+Example:
+
+```julia
+using ClobberingReload
+
+using Images    # regular using
+@ausing Foo     # autoreloaded using
+@aimport Bar    # autoreloaded import
+
+println(Bar.life_the_universe())
+> 5
+
+# ... modify Bar.jl, or one of its `include`d files
+
+println(Bar.life_the_universe())
+>   INFO: Reloading `Bar`
+> 42
+```
+
+## Dependencies
+
+TODO: if A imports B and B changes, A should be reloaded after B.
