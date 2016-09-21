@@ -60,7 +60,7 @@ can.
 
 Notes:
 
-- `creload` will output a lot of redefinition warnings, since it is overwriting existing definitions.
+- `creload` will output a lot of redefinition warnings, since it is overwriting existing definitions. Relief coming soon!
 - Parametric types cannot be _defined_  inside a `creload`ed module. (currently solved on Julia-master by [#17618](https://github.com/JuliaLang/julia/pull/17618), but not on 0.5.0). Using parametric types is fine.
 
 ## Autoreload
