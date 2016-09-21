@@ -1,17 +1,17 @@
 # ClobberingReload
 
-[![Build Status](https://travis-ci.org/cstjean/ClobReload.jl.svg?branch=master)](https://travis-ci.org/cstjean/ClobReload.jl)
+[![Build Status](https://travis-ci.org/cstjean/ClobberingReload.jl.svg?branch=master)](https://travis-ci.org/cstjean/ClobberingReload.jl)
 
-[![Coverage Status](https://coveralls.io/repos/cstjean/ClobReload.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/cstjean/ClobReload.jl?branch=master)
+[![Coverage Status](https://coveralls.io/repos/cstjean/ClobberingReload.jl/badge.svg?branch=master&service=github)](https://coveralls.io/github/cstjean/ClobberingReload.jl?branch=master)
 
-[![codecov.io](http://codecov.io/github/cstjean/ClobReload.jl/coverage.svg?branch=master)](http://codecov.io/github/cstjean/ClobReload.jl?branch=master)
+[![codecov.io](http://codecov.io/github/cstjean/ClobberingReload.jl/coverage.svg?branch=master)](http://codecov.io/github/cstjean/ClobberingReload.jl?branch=master)
 
 ClobberingReload provides a `reload` alternative that may be more convenient
 for your workflow, as well as functionality for automatically reloading
 modified modules. It is a direct successor to **@malmaud**'s
 [Autoreload.jl](https://github.com/malmaud/Autoreload.jl)
 (and a straight replacement). Its main trick is taken from
-[atom-julia-client](https://github.com/JunoLab/atom-julia-client)
+[atom-julia-client](https://github.com/JunoLab/atom-julia-client).
 
 ## Installation
 
