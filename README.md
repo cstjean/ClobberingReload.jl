@@ -31,7 +31,7 @@ and please report any issues you encounter.
 
 ```julia
 using ClobberingReload
-using Houses      # unlike with `reload`, `using` modules is fine
+using Houses               # `using` modules is fine (unlike with `reload`)
 
 h = House(nwindows=10)
 println("Price of house:$(price(h))")
