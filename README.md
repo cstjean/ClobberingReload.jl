@@ -9,9 +9,7 @@
 `ClobberingReload.creload(modulename)` is a drop-in replacement for
 `reload(modulename)`, that does not require rebuilding the state after `reload`,
 because the reloaded module's new functions are applicable to the existing
-objects. It is ideally suited for exploratory REPL-heavy workflows, and also
-works with modules imported via `using` (so no need for prefixing every function
-call with its module name)
+objects. It is ideally suited for exploratory REPL-heavy workflows.
 
 Additionally, `ClobberingReload` provides functionality for automatically
 reloading modified modules. It is a direct successor to **@malmaud**'s
@@ -33,7 +31,7 @@ and please report any issues you encounter.
 
 ```julia
 using ClobberingReload
-using Houses
+using Houses      # unlike with `reload`, `using` modules is fine
 
 h = House(nwindows=10)
 println("Price of house:$(price(h))")
@@ -43,7 +41,7 @@ println("Price of house:$(price(h))")
 
 creload("Houses")
 
-println("Price of house:$(price(h))")
+println("Price of house:$(price(h))")    # no need to redefine h
 > Price of house: 130
 ```
 
