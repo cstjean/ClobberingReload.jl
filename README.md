@@ -41,9 +41,16 @@ println("Price of house:$(price(h))")
 
 .... modify Houses.jl, change the `price` function ....
 
+creload("Houses")
+
 println("Price of house:$(price(h))")
 > Price of house: 130
 ```
+
+Notes:
+
+- `creload` will output a lot of redefinition warnings, since it is overwriting existing definitions. Relief coming soon!
+- Parametric types cannot be _defined_  inside a `creload`ed module. (currently solved on Julia-master by [#17618](https://github.com/JuliaLang/julia/pull/17618), but not on 0.5.0). Using parametric types is fine.
 
 ## Autoreload
 
@@ -104,11 +111,6 @@ typeof(st) == typeof(st2)   # true
 
 Furthermore, `reload` cannot reload modules imported via `using`, but `creload`
 can.
-
-Notes:
-
-- `creload` will output a lot of redefinition warnings, since it is overwriting existing definitions. Relief coming soon!
-- Parametric types cannot be _defined_  inside a `creload`ed module. (currently solved on Julia-master by [#17618](https://github.com/JuliaLang/julia/pull/17618), but not on 0.5.0). Using parametric types is fine.
 
 ## Dependencies
 
