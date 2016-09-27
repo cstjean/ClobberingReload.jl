@@ -9,9 +9,9 @@
 `ClobberingReload` provides several tools to help with interactive development.
 
 - `creload(modulename)` is a drop-in replacement for `reload(modulename)`, that
-does not require rebuilding the state after `reload`, because the reloaded
-module's new functions are applicable to the existing objects. It is ideally
-suited for exploratory REPL-heavy workflows.
+does not require rebuilding the state after `reload`. The new code takes effect
+immediately, and works on existing objects. It is ideally suited for
+exploratory REPL-heavy workflows.
 - Modules loaded with `@ausing` and `@aimport` are automatically reloaded when
 they are modified. This works as a successor to **@malmaud**'s great
 [Autoreload.jl](https://github.com/malmaud/Autoreload.jl) package.
