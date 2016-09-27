@@ -31,6 +31,8 @@ function register_module_files!(mod_name::String)
     end
 end
 
+""" `modified_modules()::Set{String}()` returns the set of modules that were
+modified since last time they were loaded. """
 function modified_modules()
     modified_mods = Set{String}()
     for (fname, module_names) in file2mods
@@ -45,31 +47,44 @@ function modified_modules()
 end
 
 
+# helper for ausing/aimport
+function apost!(mod_sym::Symbol)
+    module_was_loaded!(string(mod_sym))
+    register_hook!()
+    mod_sym
+end
+
+""" `@ausing module_name` is like `using module_name`, but the module will be
+reloaded automatically (in IJulia) whenever the module has changed. See
+ClobberingReload's README for details.
+
+NOTE: `@ausing module_name: a, b, c` is unsupported, but this is equivalent:
+
+```julia
+@aimport module_name
+using module_name: a, b, c
+```
+"""
 macro ausing(mod_sym::Symbol)
-    # call using
-    # register the module file for reloading
     esc(:(begin
         using $mod_sym
-        $ClobberingReload.module_was_loaded!($(string(mod_sym)))
-        $ClobberingReload.register_hook!()
-        $mod_sym
+        $ClobberingReload.apost!($mod_sym)
     end))
 end
 
+""" `@aimport module_name` is like `import module_name`, but the module will be
+reloaded automatically (in IJulia) whenever the module has changed. See
+ClobberingReload's README for details. """
 macro aimport(mod_sym::Symbol)
-    # call using
-    # register the module file for reloading
     esc(:(begin
         import $mod_sym
-        $ClobberingReload.module_was_loaded!($(string(mod_sym)))
-        $ClobberingReload.register_hook!()
-        $mod_sym
+        $ClobberingReload.apost!($mod_sym)
     end))
 end
 
 
 """ `areload()` reloads (using `creload`) all modules that have been modified
-since they were last loaded. """
+since they were last loaded. Called automatically in IJulia. """
 function areload()
     for mod_name in modified_modules()
         creload(mod_name)

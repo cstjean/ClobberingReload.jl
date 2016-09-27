@@ -13,8 +13,8 @@ on Julia 0.5:
 does not require rebuilding the state after `reload`, because the reloaded
 module's new functions are applicable to the existing objects. It is ideally
 suited for exploratory REPL-heavy workflows.
-- Modules loaded with `@ausing, @aimport` are automatically reloaded when they
-are modified. This is a direct substitute to **@malmaud**'s great
+- Modules loaded with `@ausing` and `@aimport` are automatically reloaded when
+they are modified. This works as a successor to **@malmaud**'s great
 [Autoreload.jl](https://github.com/malmaud/Autoreload.jl) package.
 - `scrub_stderr`, `scrub_redefinition_warnings` and `no_warnings` run code
 without outputting any warnings.
