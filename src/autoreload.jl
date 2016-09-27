@@ -48,10 +48,10 @@ end
 
 
 # helper for ausing/aimport
-function apost!(mod_sym::Symbol)
-    module_was_loaded!(string(mod_sym))
+function apost!(mod::Module)
+    module_was_loaded!(string(mod))
     register_hook!()
-    mod_sym
+    mod
 end
 
 """ `@ausing module_name` is like `using module_name`, but the module will be
