@@ -4,6 +4,8 @@ using MacroTools
 
 export creload
 
+include("scrub_stderr.jl")
+
 """ `parse_file(filename)` returns the expressions in `filename` as a
 `Vector` of expressions """
 function parse_file(filename)
@@ -72,7 +74,9 @@ function creload(mod_name)
     mod_path = Base.find_in_node_path(mod_name, nothing, 1)
     cd(dirname(mod_path)) do
         real_mod_name, code = parse_module_file(basename(mod_path))
-        eval(eval(Main, real_mod_name), :(begin $(code...) end));
+        scrub_redefinition_warnings() do
+            eval(eval(Main, real_mod_name), :(begin $(code...) end))
+        end
 
         # For areload()
         module_was_loaded!(mod_name)

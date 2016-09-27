@@ -35,7 +35,7 @@ function modified_modules()
     modified_mods = Set{String}()
     for (fname, module_names) in file2mods
         for mod in module_names
-                # Was it modified after the last time the module was loaded?
+            # Was it modified after the last time the module was loaded?
             if mtime(fname) > module2time[mod]
                 push!(modified_mods, mod)
             end
