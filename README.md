@@ -87,8 +87,8 @@ end
 ```
 
 In fact, that is `sinclude`'s definition (a _silent_ include):
-`sinclude("foo.jl")` runs `include("foo.jl")` silencing the redefinition
-warnings.
+`sinclude("foo.jl")` runs `include("foo.jl")`, but does not output the 
+usual redefinition warnings.
 
 `scrub_stderr` allows for scrubbing arbitrary warnings. See its docstring for
 details.
