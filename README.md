@@ -16,7 +16,7 @@ exploratory REPL-heavy workflows.
 they are modified. This works as a successor to **@malmaud**'s great
 [Autoreload.jl](https://github.com/malmaud/Autoreload.jl) package.
 - `scrub_stderr`, `scrub_redefinition_warnings` and `no_warnings` run code
-without outputting any warnings.
+with silenced warnings.
 
 See below for usage information, and the docstrings for details (eg. `?creload`)
 
@@ -90,7 +90,7 @@ In fact, that is `sinclude`'s definition (a _silent_ include):
 `sinclude("foo.jl")` runs `include("foo.jl")`, but does not output the 
 usual redefinition warnings.
 
-`scrub_stderr` allows for scrubbing arbitrary warnings. See its docstring for
+`scrub_stderr` can scrub arbitrary warnings using regexes. See its docstring for
 details.
 
 ## How `creload` works
