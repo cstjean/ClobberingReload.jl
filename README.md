@@ -6,8 +6,7 @@
 
 [![codecov.io](http://codecov.io/github/cstjean/ClobberingReload.jl/coverage.svg?branch=master)](http://codecov.io/github/cstjean/ClobberingReload.jl?branch=master)
 
-`ClobberingReload` provides several tools for aiding in interactive development,
-on Julia 0.5:
+`ClobberingReload` provides several tools to help with interactive development.
 
 - `creload(modulename)` is a drop-in replacement for `reload(modulename)`, that
 does not require rebuilding the state after `reload`, because the reloaded
@@ -31,7 +30,7 @@ Pkg.clone("git://github.com/cstjean/ClobberingReload.jl.git")
 
 and please report any issues you encounter.
 
-## Usage
+## `creload`
 
 ```julia
 using ClobberingReload
@@ -87,7 +86,9 @@ scrub_redefinition_warnings() do
 end
 ```
 
-In fact, that is `sinclude`'s definition (a _silent_ include).
+In fact, that is `sinclude`'s definition (a _silent_ include):
+`sinclude("foo.jl")` runs `include("foo.jl")` silencing the redefinition
+warnings.
 
 `scrub_stderr` allows for scrubbing arbitrary warnings. See its docstring for
 details.
