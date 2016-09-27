@@ -16,7 +16,7 @@ exploratory REPL-heavy workflows.
 they are modified. This works as a successor to **@malmaud**'s great
 [Autoreload.jl](https://github.com/malmaud/Autoreload.jl) package.
 - `scrub_stderr`, `scrub_redefinition_warnings` and `no_warnings` run code
-with silenced warnings.
+with some warnings silenced.
 
 See below for usage information, and the docstrings for details (eg. `?creload`)
 
