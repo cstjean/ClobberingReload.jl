@@ -6,16 +6,20 @@
 
 [![codecov.io](http://codecov.io/github/cstjean/ClobberingReload.jl/coverage.svg?branch=master)](http://codecov.io/github/cstjean/ClobberingReload.jl?branch=master)
 
-`ClobberingReload.creload(modulename)` is a drop-in replacement for
-`reload(modulename)`, that does not require rebuilding the state after `reload`,
-because the reloaded module's new functions are applicable to the existing
-objects. It is ideally suited for exploratory REPL-heavy workflows.
+`ClobberingReload` provides several tools for aiding in interactive development,
+on Julia 0.5:
 
-Additionally, `ClobberingReload` provides functionality for automatically
-reloading modified modules. It is a direct successor to **@malmaud**'s
-[Autoreload.jl](https://github.com/malmaud/Autoreload.jl) (and a straight
-replacement). Its main trick is taken from
-[atom-julia-client](https://github.com/JunoLab/atom-julia-client).
+- `creload(modulename)` is a drop-in replacement for `reload(modulename)`, that
+does not require rebuilding the state after `reload`, because the reloaded
+module's new functions are applicable to the existing objects. It is ideally
+suited for exploratory REPL-heavy workflows.
+- Modules loaded with `@ausing, @aimport` are automatically reloaded when they
+are modified. This is a direct substitute to **@malmaud**'s great
+[Autoreload.jl](https://github.com/malmaud/Autoreload.jl) package.
+- `scrub_stderr`, `scrub_redefinition_warnings` and `no_warnings` run code
+without outputting any warnings.
+
+See below for usage information, and the docstrings for details (eg. `?creload`)
 
 ## Installation
 
@@ -45,10 +49,7 @@ println("Price of house:$(price(h))")    # no need to redefine h
 > Price of house: 130
 ```
 
-Notes:
-
-- `creload` will output a lot of redefinition warnings, since it is overwriting existing definitions. Relief coming soon!
-- Parametric types cannot be _defined_  inside a `creload`ed module. (currently solved on Julia-master by [#17618](https://github.com/JuliaLang/julia/pull/17618), but not on 0.5.0). Using parametric types is fine.
+NOTE: Parametric types cannot be _defined_  inside a `creload`ed module. (currently solved on Julia-master by [#17618](https://github.com/JuliaLang/julia/pull/17618), but not on 0.5.0). Using parametric types is fine.
 
 ## Autoreload
 
@@ -74,6 +75,22 @@ println(Bar.life_the_universe())
 ```
 
 The Julia REPL [does not support automatic calling of code yet](https://github.com/JuliaLang/julia/issues/6445), but you can still trigger the autoreload feature for `@aimport`ed modules by calling `areload()` manually.
+
+## Silencing warnings
+
+`scrub_stderr`, `scrub_redefinition_warnings` and `no_warnings` help silence
+Julia's sometimes verbose warnings. Typical usage:
+
+```julia
+scrub_redefinition_warnings() do
+    include(filename)
+end
+```
+
+In fact, that is `sinclude`'s definition (a _silent_ include).
+
+`scrub_stderr` allows for scrubbing arbitrary warnings. See its docstring for
+details.
 
 ## How `creload` works
 
