@@ -1,5 +1,3 @@
-import IJulia
-
 export areload, @ausing, @aimport
 
 
@@ -7,7 +5,11 @@ hook_registered = false
 function register_hook!() # for IJulia
     if !hook_registered
         global hook_registered = true
-        IJulia.push_preexecute_hook(areload)
+        try
+            # This is in order to avoid requiring IJulia.
+            # We could also use Requires.jl
+            Main.IJulia.push_preexecute_hook(areload)
+        end
     end
 end
 
