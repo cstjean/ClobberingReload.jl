@@ -10,10 +10,9 @@
 
 - `creload(modulename)` is a drop-in replacement for `reload(modulename)`, that
 does not require rebuilding the state after `reload`. The new code takes effect
-immediately, and works on existing objects. It is ideally suited for
-exploratory REPL-heavy workflows.
+immediately, and works on existing objects. 
 - Modules loaded with `@ausing` and `@aimport` are automatically reloaded when
-they are modified. This works as a successor to **@malmaud**'s great
+they are modified. This works as a successor to **@malmaud**'s 
 [Autoreload.jl](https://github.com/malmaud/Autoreload.jl) package.
 - `scrub_stderr`, `scrub_redefinition_warnings` and `no_warnings` run code
 with some warnings silenced.
@@ -54,7 +53,7 @@ NOTE: Parametric types cannot be _defined_  inside a `creload`ed module. (curren
 
 In [IJulia](https://github.com/JuliaLang/IJulia.jl) (Jupyter notebooks), `creload` will be called
 automatically for modules that were imported using `@ausing` or `@aimport`,
-whenever the module's source code has been changed. For example:
+whenever the module's source code has been changed. 
 
 ```julia
 using ClobberingReload
@@ -73,11 +72,11 @@ println(Bar.life_the_universe())
 > 42
 ```
 
-The Julia REPL [does not support automatic calling of code yet](https://github.com/JuliaLang/julia/issues/6445), but you can still trigger the autoreload feature for `@aimport`ed modules by calling `areload()` manually.
+The Julia REPL [does not have execution hooks yet](https://github.com/JuliaLang/julia/issues/6445), but you can still trigger the autoreload feature for `@aimport`ed modules by calling `areload()` manually.
 
 ## Silencing warnings
 
-`scrub_stderr`, `scrub_redefinition_warnings` and `no_warnings` help silence
+`scrub_stderr`, `scrub_redefinition_warnings` and `no_warnings` silence some of
 Julia's sometimes verbose warnings. Typical usage:
 
 ```julia
@@ -86,12 +85,10 @@ scrub_redefinition_warnings() do
 end
 ```
 
-In fact, that is `sinclude`'s definition (a _silent_ include):
-`sinclude("foo.jl")` runs `include("foo.jl")`, but does not output the 
-usual redefinition warnings.
-
-`scrub_stderr` can scrub arbitrary warnings using regexes. See its docstring for
-details.
+- `sinclude("foo.jl")` uses the above code to run `include("foo.jl")` without
+the usual redefinition warnings.
+- `scrub_stderr` can scrub arbitrary warnings using regexes. See its docstring
+for details.
 
 ## How `creload` works
 
