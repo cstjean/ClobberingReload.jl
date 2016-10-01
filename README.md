@@ -21,13 +21,9 @@ See below for usage information, and the docstrings for details (eg. `?creload`)
 
 ## Installation
 
-ClobberingReload is not yet registered in METADATA. Install with
-
 ```julia
-Pkg.clone("git://github.com/cstjean/ClobberingReload.jl.git")
+Pkg.add("ClobberingReload.jl")
 ```
-
-and please report any issues you encounter.
 
 ## `creload`
 
@@ -77,7 +73,7 @@ The Julia REPL [does not have execution hooks yet](https://github.com/JuliaLang/
 ## Silencing warnings
 
 `scrub_stderr`, `scrub_redefinition_warnings` and `no_warnings` silence some of
-Julia's sometimes verbose warnings. Typical usage:
+Julia's warnings. Typical usage:
 
 ```julia
 scrub_redefinition_warnings() do
