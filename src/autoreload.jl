@@ -1,5 +1,34 @@
 export areload, @ausing, @aimport
 
+gather_includes(code::Vector) = 
+    mapreduce(expr->(@match expr begin
+        include(fname_) => [fname]
+        any_ => []
+    end), vcat, vcat(code, [:(1+1)]))
+
+"""    gather_all_module_files(mod_name::String)
+
+Given a module name (as a string), returns the list of all files that define
+this module (i.e. the module name + all included files, applied recursively)
+"""
+function gather_all_module_files(mod_name::String)
+    mod_path = Base.find_in_node_path(mod_name, nothing, 1)
+    included_files = Set{String}([mod_path]) # to be filled
+    gather(full_path, parse_fun) = 
+        cd(dirname(full_path)) do
+            mod_includes = map(abspath,
+                               gather_includes(parse_fun(basename(full_path))))
+        end
+    function rec(path::String)
+        if !(path in included_files)
+            push!(included_files, path)
+            map(rec, gather(path, parse_file))
+        end
+    end
+    map(rec, gather(mod_path, mod->parse_module_file(mod)[2]))
+    return included_files
+end
+
 
 hook_registered = false
 function register_hook!() # for IJulia
