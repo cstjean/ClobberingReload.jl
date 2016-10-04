@@ -38,16 +38,36 @@ function parse_module_file(fname::String)
 end
 
 
+# Taken from CodeTools, see ClobberingReload#3. We could REQUIRE it. It has a
+# few dependencies.
+function withpath(f, path)
+  tls = task_local_storage()
+  hassource = haskey(tls, :SOURCE_PATH)
+  hassource && (path′ = tls[:SOURCE_PATH])
+  tls[:SOURCE_PATH] = path
+  try
+    return f()
+  finally
+    hassource ?
+      (tls[:SOURCE_PATH] = path′) :
+      delete!(tls, :SOURCE_PATH)
+  end
+end
+
+
 """ `creload(mod_name)` reloads `mod_name` by executing the module code inside
 the **existing** module. So unlike `reload`, `creload` does not create a new
 module objects; it merely clobbers the existing definitions therein. """
 function creload(mod_name)
     info("Reloading $mod_name")
     mod_path = Base.find_in_node_path(mod_name, nothing, 1)
-    cd(dirname(mod_path)) do
+    withpath(mod_path) do
+        # real_mod_name is in case that the module name differs from the
+        # file name, but... I'm not sure that makes any difference. Maybe we
+        # should just assert that they're the same.
         real_mod_name, code = parse_module_file(basename(mod_path))
         scrub_redefinition_warnings() do
-            eval(eval(Main, real_mod_name), :(begin $(code...) end))
+            eval(eval(Main, real_mod_name), Expr(:toplevel, code...))
         end
 
         # For areload()
