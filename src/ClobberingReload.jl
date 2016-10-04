@@ -65,7 +65,7 @@ function creload(mod_name)
         # real_mod_name is in case that the module name differs from the
         # file name, but... I'm not sure that makes any difference. Maybe we
         # should just assert that they're the same.
-        real_mod_name, code = parse_module_file(basename(mod_path))
+        real_mod_name, code = parse_module_file(mod_path)
         scrub_redefinition_warnings() do
             eval(eval(Main, real_mod_name), Expr(:toplevel, code...))
         end
