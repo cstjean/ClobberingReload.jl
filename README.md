@@ -1,4 +1,4 @@
-# ClobberingReload
+# ClobberingReload.jl
 
 [![Build Status](https://travis-ci.org/cstjean/ClobberingReload.jl.svg?branch=master)](https://travis-ci.org/cstjean/ClobberingReload.jl)
 
@@ -6,7 +6,7 @@
 
 [![codecov.io](http://codecov.io/github/cstjean/ClobberingReload.jl/coverage.svg?branch=master)](http://codecov.io/github/cstjean/ClobberingReload.jl?branch=master)
 
-`ClobberingReload` provides several tools to help with interactive development.
+`ClobberingReload.jl` helps with interactive development.
 
 - `creload(modulename)` is a drop-in replacement for `reload(modulename)`, that
 does not require rebuilding the state after `reload`. The new code takes effect
