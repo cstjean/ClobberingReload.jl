@@ -22,7 +22,7 @@ See below for usage information, and the docstrings for details (eg. `?creload`)
 ## Installation
 
 ```julia
-Pkg.add("ClobberingReload.jl")
+Pkg.add("ClobberingReload")
 ```
 
 ## `creload`
