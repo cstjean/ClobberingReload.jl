@@ -25,7 +25,7 @@ See below for usage information, and the docstrings for details (eg. `?creload`)
 Pkg.add("ClobberingReload")
 ```
 
-## `creload`
+## Using `creload`
 
 ```julia
 using ClobberingReload
