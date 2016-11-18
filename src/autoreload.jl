@@ -1,11 +1,9 @@
 export areload, @ausing, @aimport
 
-const autoreloaded_modules = Set()
-
-# Filename => Set(Modules_That_Include_Filename)
-const file2mods = Dict{String, Set{String}}()
+const mod2files = Dict{String, Set{String}}()
 # Module => Last_Time_It_Was_Loaded
 const module2time = Dict{String, Number}()
+const depends_on = Dict{String, Set{String}}()
 
 gather_includes(code::Vector) = 
     mapreduce(expr->(@match expr begin
@@ -59,30 +57,18 @@ end
 
 Remembers all the files included by `mod_name` """
 function register_module_files!(mod_name::String)
-    for fname in gather_all_module_files(mod_name)
-        push!(get!(file2mods, fname, Set{String}()), mod_name)
-    end
+    mod2files[mod_name] = gather_all_module_files(mod_name)
 end
 
-""" `modified_modules()::Set{String}()` returns the set of modules that were
-modified since last time they were loaded. """
-function modified_modules()
-    modified_mods = Set{String}()
-    for (fname, module_names) in file2mods
-        for mod in module_names
-            # Was it modified after the last time the module was loaded?
-            if mtime(fname) > module2time[mod]
-                push!(modified_mods, mod)
-            end
-        end
-    end
-    return modified_mods
-end
-
+""" `is_modified(mod::String)` returns true iff one of its files was modified
+"""
+is_modified(mod::String) = any(mtime(fname) > module2time[mod]
+                               for fname in mod2files[mod])
 
 # helper for ausing/aimport
-function apost!(mod::Module)
-    push!(autoreloaded_modules, string(mod))
+function apost!(mod::Module, deps=[])
+    if isa(deps, Module) deps = [deps] end
+    depends_on[string(mod)] = Set{String}(map(string, deps))
     module_was_loaded!(string(mod))
     register_hook!()
     mod
@@ -106,6 +92,14 @@ macro ausing(mod_sym::Symbol)
     end))
 end
 
+macro ausing(mod_deps::Expr)
+    @assert @capture(mod_deps, mod_sym_ <: deps_)
+    esc(:(begin
+        using $mod_sym
+        $ClobberingReload.apost!($mod_sym, $deps)
+    end))
+end
+
 """ `@aimport module_name` is like `import module_name`, but the module will be
 reloaded automatically (in IJulia) whenever the module has changed. See
 ClobberingReload's README for details. """
@@ -116,13 +110,31 @@ macro aimport(mod_sym::Symbol)
     end))
 end
 
+macro aimport(mod_deps::Expr)
+    @assert @capture(mod_deps, mod_sym_ <: deps_)
+    esc(:(begin
+        import $mod_sym
+        $ClobberingReload.apost!($mod_sym, $deps)
+    end))
+end
 
 """ `areload()` reloads (using `creload`) all modules that have been modified
 since they were last loaded. Called automatically in IJulia. """
 function areload()
-    for mod_name in modified_modules()
-        if mod_name in autoreloaded_modules
-            creload(mod_name)
+    was_reloaded = Dict{String, Bool}()
+    function relo(mod_name)
+        if haskey(was_reloaded, mod_name)
+            return was_reloaded[mod_name]
+        else
+            # First reload all its dependencies.
+            # We have to reload mod_name IFF one of its dependencies is
+            # reloaded, or if it's modified itself
+            to_rel = any(relo, depends_on[mod_name]) || is_modified(mod_name)
+            if to_rel
+                creload(mod_name)
+            end
+            was_reloaded[mod_name] = to_rel
         end
     end
+    foreach(relo, keys(depends_on))
 end

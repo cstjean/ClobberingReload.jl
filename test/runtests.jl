@@ -6,8 +6,10 @@ cp("F1.jl", "F.jl", remove_destination=true)
 push!(LOAD_PATH, dirname(Base.source_path()))
 
 @ausing AA
+@ausing BB <: AA
 
 @test something == "happy"
+@test likes == "happy banana cards"
 
 cp("F2.jl", "F.jl", remove_destination=true)
 
@@ -21,4 +23,5 @@ touch("F.jl")
 areload()
 
 @test something == "green"
+@test likes == "green banana cards"
 
