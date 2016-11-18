@@ -68,7 +68,12 @@ is_modified(mod::String) = any(mtime(fname) > module2time[mod]
 # helper for ausing/aimport
 function apost!(mod::Module, deps=[])
     if isa(deps, Module) deps = [deps] end
-    depends_on[string(mod)] = Set{String}(map(string, deps))
+    deps = Set{String}(map(string, deps))
+    for dep in deps
+        @assert(haskey(depends_on, dep),
+                "@ausing/@aimport error: $mod depends on $dep, but $dep isn't registered for autoreloading. Write `@ausing $dep` before `@ausing $mod <: ...`")
+    end
+    depends_on[string(mod)] = deps
     module_was_loaded!(string(mod))
     register_hook!()
     mod
