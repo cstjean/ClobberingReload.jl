@@ -131,7 +131,3 @@ typeof(st) == typeof(st2)   # true
 
 Furthermore, `reload` cannot reload modules imported via `using`, but `creload`
 can.
-
-## Dependencies
-
-TODO: if A imports B and B changes, A should be reloaded after B.
