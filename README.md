@@ -70,6 +70,17 @@ println(Bar.life_the_universe())
 
 The Julia REPL [does not have execution hooks yet](https://github.com/JuliaLang/julia/issues/6445), but you can still trigger the autoreload feature for `@aimport`ed modules by calling `areload()` manually.
 
+#### Dependencies
+
+```julia
+@ausing A
+@ausing B
+@ausing C <: (A, B)
+```
+
+Whenever `A` or `B` are modified and reloaded, `C` will be automatically
+reloaded, too. 
+
 ## Silencing warnings
 
 `scrub_stderr`, `scrub_redefinition_warnings` and `no_warnings` silence some of
