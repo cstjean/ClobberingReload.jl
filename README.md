@@ -74,12 +74,12 @@ The Julia REPL [does not have execution hooks yet](https://github.com/JuliaLang/
 
 ```julia
 @ausing A
-@ausing B
-@ausing C <: (A, B)
+@ausing B <: A
+@ausing C <: B
 ```
 
-Whenever `A` or `B` are modified and reloaded, `C` will be automatically
-reloaded, too. 
+Whenever `A` is modified, A, B and C will be automatically reloaded. Use this
+whenever you're working on two modules at the same time.
 
 ## Silencing warnings
 
