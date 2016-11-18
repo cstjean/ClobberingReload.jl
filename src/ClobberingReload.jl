@@ -75,6 +75,7 @@ function creload(mod_name)
         # For areload()
         module_was_loaded!(mod_name)
     end
+    mod_name
 end
 
 include("autoreload.jl")
