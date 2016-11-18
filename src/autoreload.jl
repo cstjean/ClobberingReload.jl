@@ -1,5 +1,12 @@
 export areload, @ausing, @aimport
 
+const autoreloaded_modules = Set()
+
+# Filename => Set(Modules_That_Include_Filename)
+const file2mods = Dict{String, Set{String}}()
+# Module => Last_Time_It_Was_Loaded
+const module2time = Dict{String, Number}()
+
 gather_includes(code::Vector) = 
     mapreduce(expr->(@match expr begin
         include(fname_) => [fname]
@@ -42,11 +49,6 @@ function register_hook!() # for IJulia
     end
 end
 
-# Filename => Set(Modules_That_Include_Filename)
-file2mods = Dict{String, Set{String}}() # TODO: const
-# Module => Last_Time_It_Was_Loaded
-module2time = Dict{String, Number}()
-
 function module_was_loaded!(mod_name)
     module2time[mod_name] = time()
     register_module_files!(mod_name)
@@ -80,6 +82,7 @@ end
 
 # helper for ausing/aimport
 function apost!(mod::Module)
+    push!(autoreloaded_modules, string(mod))
     module_was_loaded!(string(mod))
     register_hook!()
     mod
@@ -118,6 +121,8 @@ end
 since they were last loaded. Called automatically in IJulia. """
 function areload()
     for mod_name in modified_modules()
-        creload(mod_name)
+        if mod_name in autoreloaded_modules
+            creload(mod_name)
+        end
     end
 end
