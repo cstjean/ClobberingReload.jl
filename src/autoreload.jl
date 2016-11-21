@@ -5,11 +5,13 @@ const mod2files = Dict{String, Set{String}}()
 const module2time = Dict{String, Number}()
 const depends_on = Dict{String, Set{String}}()
 
-gather_includes(code::Vector) = 
-    mapreduce(expr->(@match expr begin
-        include(fname_) => [fname]
-        any_ => []
-    end), vcat, vcat(code, [:(1+1)]))
+gather_includes(code::Vector) =
+    mapreduce(vcat, vcat(code, [:(1+1)])) do expr
+        @match expr begin
+            include(fname_) => [fname]
+            any_ => []
+        end
+    end
 
 """    gather_all_module_files(mod_name::String)
 
