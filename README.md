@@ -43,7 +43,7 @@ println("Price of house:$(price(h))")    # no need to redefine h
 > Price of house: 130
 ```
 
-NOTE: Parametric types cannot be _defined_  inside a `creload`ed module. (currently solved on Julia-master by [#17618](https://github.com/JuliaLang/julia/pull/17618), but not on 0.5.0). Using parametric types is fine.
+NOTE: Parametric types cannot be _defined_  inside a `creload`ed module. (This is no longer an issue on Julia 0.6, see [#17618](https://github.com/JuliaLang/julia/pull/17618)). Using parametric types is fine.
 
 ## Autoreload
 
@@ -57,6 +57,8 @@ using ClobberingReload
 using Images    # regular using
 @ausing Foo     # autoreloaded using
 @aimport Bar    # autoreloaded import
+@ausing Car <: (Foo, Bar)  # autoreloaded with dependency: whenever Car, Foo, or Bar
+                           # are modified, Car will be reloaded
 
 println(Bar.life_the_universe())
 > 5
@@ -69,17 +71,6 @@ println(Bar.life_the_universe())
 ```
 
 The Julia REPL [does not have execution hooks yet](https://github.com/JuliaLang/julia/issues/6445), but you can still trigger the autoreload feature for `@aimport`ed modules by calling `areload()` manually.
-
-#### Dependencies
-
-```julia
-@ausing A
-@ausing B <: A
-@ausing C <: B
-```
-
-Whenever `A` is modified, A, B and C will be automatically reloaded. Use this
-whenever you're working on two modules at the same time.
 
 ## Silencing warnings
 
