@@ -1,3 +1,6 @@
+# This code is derived from @malmaud's Autoreload.jl
+# It also contains snippets from @MikeInnes's Juno
+
 export areload, @ausing, @aimport
 
 const mod2files = Dict{String, Set{String}}()
