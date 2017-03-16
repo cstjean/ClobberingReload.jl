@@ -43,7 +43,8 @@ println("Price of house:$(price(h))")    # no need to redefine h
 > Price of house: 130
 ```
 
-NOTE: Parametric types cannot be _defined_  inside a `creload`ed module. (This is no longer an issue on Julia 0.6, see [#17618](https://github.com/JuliaLang/julia/pull/17618)). Using parametric types is fine.
+NOTE: Parametric types cannot be defined inside a `creload`ed module on Julia 0.5.
+This is fixed on Julia 0.6.
 
 ## Autoreload
 
