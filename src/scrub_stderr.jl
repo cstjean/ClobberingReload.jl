@@ -7,6 +7,9 @@ redefinition_regexes =
     [r"WARNING\: Method definition .* in module .* at .* overwritten at .*\n",
      r"WARNING\: Method definition .* in module .* overwritten\.\n",
      r"WARNING\: replacing docs for .*\n",
+     # 0.6 updated its doc warnings with color. Looks like this:
+     # \e[1m\e[33mWARNING: \e[39m\e[22m\e[33mreplacing
+     r".*WARNING: .*replacing docs for .*\n",
      r"WARNING\: redefining constant .*\n"]
 
 
