@@ -19,6 +19,8 @@ with some warnings silenced.
 
 See below for usage information, and the docstrings for details (eg. `?creload`)
 
+ClobberingReload borrows some code and interface from [Autoreload.jl](https://github.com/malmaud/Autoreload.jl) by Jon Malmaud.
+
 ## Installation
 
 ```julia
