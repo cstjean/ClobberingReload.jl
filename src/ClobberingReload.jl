@@ -3,8 +3,9 @@ __precompile__()
 module ClobberingReload
 
 using MacroTools
+using MacroTools: postwalk
 
-export creload
+export creload, creload_strip, creload_diving
 
 include("scrub_stderr.jl")
 
@@ -60,6 +61,13 @@ function withpath(f, path)
   end
 end
 
+withpath_cd(f, path) =
+    cd(dirname(abspath(path))) do
+        withpath(path) do
+            f()
+        end
+    end
+
 get_module(mod_name::Symbol) = eval(Main, mod_name)
 get_module(mod::Module) = mod
 
@@ -85,18 +93,48 @@ function creload(code_function::Function, mod_name::String)
     if mod_path === nothing
         error("Cannot find path of module $mod_name. To be reloadable, the module has to be defined in a file called $mod_name.jl, and that file's directory must be pushed onto the LOAD_PATH")
     end
-    withpath(mod_path::String) do
+    withpath_cd(mod_path::String) do
         # real_mod_name is in case that the module name differs from the file name,
-        # but... I'm not sure that makes any difference. Maybe we should just assert that
-        # they're the same.
+        # but... I'm not sure that makes any difference. Maybe we should just assert
+        # that they're the same.
         real_mod_name, raw_code = parse_module_file(mod_path)
-        code = strip_parametric_typealiases(raw_code)
-        transformed_code = code_function(code)
+        transformed_code = code_function(raw_code)
         run_code_in(transformed_code, real_mod_name)
     end
     module_was_loaded!(mod_name)  # for areload()
     mod_name
 end
+
+""" `creload_strip(mod)` is like `creload(mod)`, but it strips out the parametric
+typealiases (which cause issues under 0.6) """
+creload_strip(mod) = creload_diving(strip_parametric_typealiases, mod)
+
+function insert_include_transform(fun::Function, code::Vector)
+    map(code) do expr
+        postwalk(expr) do x
+            @capture(x, include(file_)) || return x
+            :($ClobberingReload.include_transform($file, $fun))
+        end
+    end
+end
+
+""" `include_transform(file::String, fun::Function)` applies `fun` to the parsed code,
+then runs it (as in a normal `include`) """
+function include_transform(file::String, fun::Function)
+    code = parse_file(file)
+    withpath_cd(file) do
+        run_code_in(fun(code), current_module())
+    end
+end
+
+diving_transformer(code_function) =
+    code -> insert_include_transform(diving_transformer(code_function),
+                                     code_function(code))
+
+""" `creload_diving(code_function::Function, mod_name)` will apply `code_function`
+to the module's code (as a vector), and to every included file. """
+creload_diving(code_function::Function, mod_name) =
+    creload(diving_transformer(code_function), mod_name)
 
 include("autoreload.jl")
 
