@@ -60,6 +60,16 @@ function withpath(f, path)
   end
 end
 
+get_module(mod_name::Symbol) = eval(Main, mod_name)
+get_module(mod::Module) = mod
+
+function run_code_in(code::Vector, mod)
+    scrub_redefinition_warnings() do
+        eval(get_module(mod), Expr(:toplevel, code...))
+    end
+end
+
+
 """ `creload(mod_name)` reloads `mod_name` by executing the module code inside
 the **existing** module. So unlike `reload`, `creload` does not create a new
 module objects; it merely clobbers the existing definitions therein. """
@@ -76,17 +86,15 @@ function creload(code_function::Function, mod_name::String)
         error("Cannot find path of module $mod_name. To be reloadable, the module has to be defined in a file called $mod_name.jl, and that file's directory must be pushed onto the LOAD_PATH")
     end
     withpath(mod_path::String) do
-        # real_mod_name is in case that the module name differs from the
-        # file name, but... I'm not sure that makes any difference. Maybe we
-        # should just assert that they're the same.
+        # real_mod_name is in case that the module name differs from the file name,
+        # but... I'm not sure that makes any difference. Maybe we should just assert that
+        # they're the same.
         real_mod_name, raw_code = parse_module_file(mod_path)
         code = strip_parametric_typealiases(raw_code)
         transformed_code = code_function(code)
-        scrub_redefinition_warnings() do
-            eval(eval(Main, real_mod_name), Expr(:toplevel, transformed_code...))
-        end
-        module_was_loaded!(mod_name)  # for areload()
+        run_code_in(transformed_code, real_mod_name)
     end
+    module_was_loaded!(mod_name)  # for areload()
     mod_name
 end
 
