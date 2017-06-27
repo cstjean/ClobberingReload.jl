@@ -63,8 +63,8 @@ end
 """ `creload(mod_name)` reloads `mod_name` by executing the module code inside
 the **existing** module. So unlike `reload`, `creload` does not create a new
 module objects; it merely clobbers the existing definitions therein. """
-creload(mod::String) = creload(identity, mod)
-creload(mod::Module) = creload(identity, string(mod))
+creload(mod) = creload(identity, mod)
+creload(code_function::Function, mod_name::Module) = creload(code_function, string(mod))
 
 """ `creload(f::Function, mod_name)` applies `f` to the code before reloading it.
 This allows external instrumentation of a module's code (for instance, to add profiling
