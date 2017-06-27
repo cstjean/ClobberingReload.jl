@@ -60,10 +60,13 @@ end
 """ `creload(mod_name)` reloads `mod_name` by executing the module code inside
 the **existing** module. So unlike `reload`, `creload` does not create a new
 module objects; it merely clobbers the existing definitions therein. """
-function creload(mod_name)
+function creload(mod_name::String)
     info("Reloading $mod_name")
     mod_path = Base.find_in_node_path(mod_name, nothing, 1)
-    withpath(mod_path) do
+    if mod_path === nothing
+        error("Cannot find path of module $mod_name. A module M has to be defined in M.jl to be reloadable, and its directory must be pushed onto the LOAD_PATH")
+    end
+    withpath(mod_path::String) do
         # real_mod_name is in case that the module name differs from the
         # file name, but... I'm not sure that makes any difference. Maybe we
         # should just assert that they're the same.
