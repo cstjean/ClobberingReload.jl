@@ -64,7 +64,7 @@ function creload(mod_name::String)
     info("Reloading $mod_name")
     mod_path = Base.find_in_node_path(mod_name, nothing, 1)
     if mod_path === nothing
-        error("Cannot find path of module $mod_name. A module M has to be defined in M.jl to be reloadable, and its directory must be pushed onto the LOAD_PATH")
+        error("Cannot find path of module $mod_name. To be reloadable, the module has to be defined in a file called $mod_name.jl, and that file's directory must be pushed onto the LOAD_PATH")
     end
     withpath(mod_path::String) do
         # real_mod_name is in case that the module name differs from the
@@ -80,6 +80,7 @@ function creload(mod_name::String)
     end
     mod_name
 end
+creload(mod::Module) = creload(string(mod))
 
 include("autoreload.jl")
 
