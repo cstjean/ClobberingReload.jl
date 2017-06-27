@@ -63,7 +63,13 @@ end
 """ `creload(mod_name)` reloads `mod_name` by executing the module code inside
 the **existing** module. So unlike `reload`, `creload` does not create a new
 module objects; it merely clobbers the existing definitions therein. """
-function creload(mod_name::String)
+creload(mod::String) = creload(identity, mod)
+creload(mod::Module) = creload(identity, string(mod))
+
+""" `creload(f::Function, mod_name)` applies `f` to the code before reloading it.
+This allows external instrumentation of a module's code (for instance, to add profiling
+code). `f` accepts a Vector of Expr and should return a Vector of Expr. """
+function creload(code_function::Function, mod_name::String)
     info("Reloading $mod_name")
     mod_path = Base.find_in_node_path(mod_name, nothing, 1)
     if mod_path === nothing
@@ -75,14 +81,14 @@ function creload(mod_name::String)
         # should just assert that they're the same.
         real_mod_name, raw_code = parse_module_file(mod_path)
         code = strip_parametric_typealiases(raw_code)
+        transformed_code = code_function(code)
         scrub_redefinition_warnings() do
-            eval(eval(Main, real_mod_name), Expr(:toplevel, code...))
+            eval(eval(Main, real_mod_name), Expr(:toplevel, transformed_code...))
         end
         module_was_loaded!(mod_name)  # for areload()
     end
     mod_name
 end
-creload(mod::Module) = creload(string(mod))
 
 include("autoreload.jl")
 
