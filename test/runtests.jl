@@ -26,3 +26,10 @@ areload()
 @test something == "green"
 @test likes == "green banana cards"
 
+################################################################################
+
+if VERSION >= v"0.6.0"
+    using ParametricTypeAlias
+    creload("ParametricTypeAlias")
+    @assert Int[1,2,3] isa ParametricTypeAlias.MyVector{Int}
+end
