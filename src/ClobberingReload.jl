@@ -41,7 +41,8 @@ function parse_module_file(fname::String)
 end
 
 is_typealias(expr) =
-    @capture(expr, (some_type_{params__} = any_) | (const some_type_{params__} = any_))
+    @capture(expr, (some_type_{params__} = any_) | (const some_type_{params__} = any_) |
+             (@compat some_type_{params__} = any_))
 
 strip_parametric_typealiases(code) = filter(x->!is_typealias(x), code)
 
