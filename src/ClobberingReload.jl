@@ -82,7 +82,10 @@ end
 """ `creload(mod_name)` reloads `mod_name` by executing the module code inside
 the **existing** module. So unlike `reload`, `creload` does not create a new
 module objects; it merely clobbers the existing definitions therein. """
-creload(mod) = creload(identity, mod)
+function creload(mod)
+    mod_name = creload(identity, mod)
+    module_was_loaded!(mod_name)  # for areload()
+end    
 creload(code_function::Function, mod_name::Module) =
     creload(code_function, string(mod_name))
 
@@ -103,13 +106,15 @@ function creload(code_function::Function, mod_name::String)
         transformed_code = code_function(raw_code)
         run_code_in(transformed_code, real_mod_name)
     end
-    module_was_loaded!(mod_name)  # for areload()
     mod_name
 end
 
 """ `creload_strip(mod)` is like `creload(mod)`, but it strips out the parametric
 typealiases (which cause issues under 0.6) """
-creload_strip(mod) = creload_diving(strip_parametric_typealiases, mod)
+function creload_strip(mod)
+    mod_name = creload_diving(strip_parametric_typealiases, mod)
+    module_was_loaded!(mod_name)
+end
 
 function insert_include_transform(fun::Function, code::Vector)
     map(code) do expr

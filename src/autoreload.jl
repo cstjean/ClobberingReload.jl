@@ -55,6 +55,7 @@ end
 function module_was_loaded!(mod_name)
     module2time[mod_name] = time()
     register_module_files!(mod_name)
+    mod_name
 end
         
 
