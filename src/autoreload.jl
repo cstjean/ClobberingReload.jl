@@ -22,7 +22,10 @@ module_definition_file(mod_name::String) =
 """    gather_all_module_files(mod_name::String)
 
 Given a module name (as a string), returns the list of all files that define
-this module (i.e. the module name + all included files, applied recursively)
+this module (i.e. the module name + all included files, applied recursively).
+
+IMPORTANT: we only return and follow `include("somestring")`. We give up on things like:
+`include(joinpath(dirname(@__FILE__), "..", "deps","depsutils.jl"))`
 """
 function gather_all_module_files(mod_name::String)
     mod_path = module_definition_file(mod_name)
@@ -30,7 +33,8 @@ function gather_all_module_files(mod_name::String)
     gather(full_path, parse_fun) = 
         cd(dirname(full_path)) do
             mod_includes = map(abspath,
-                               gather_includes(parse_fun(basename(full_path))))
+                               filter(x->x isa String,
+                                      gather_includes(parse_fun(basename(full_path)))))
         end
     function rec(path::String)
         if !(path in included_files)
