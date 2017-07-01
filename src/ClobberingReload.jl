@@ -72,11 +72,20 @@ withpath_cd(f, path) =
 get_module(mod_name::Symbol) = eval(Main, mod_name)
 get_module(mod::Module) = mod
 
-function run_code_in(code::Vector, mod)
+""" `run_code_in(code::Vector, mod, in_file=nothing)` executes `code` as if it was defined
+in module `mod`, in file `in_file`. It also moves to the `in_file` directory if specified,
+so that `include` works. """
+function run_code_in(code::Vector, mod, in_file=nothing)
+    if in_file !== nothing
+        return withpath_cd(in_file::String) do
+            run_code_in(code, mod)
+        end
+    end
     scrub_redefinition_warnings() do
         eval(get_module(mod), Expr(:toplevel, code...))
     end
 end
+run_code_in(code::Expr, mod, in_file=nothing) = run_code_in([code], mod, in_file)
 
 
 """ `creload(mod_name)` reloads `mod_name` by executing the module code inside
@@ -129,9 +138,7 @@ end
 then runs it (as in a normal `include`) """
 function include_transform(file::String, fun::Function)
     code = parse_file(file)
-    withpath_cd(file) do
-        run_code_in(fun(code), current_module())
-    end
+    run_code_in(fun(code), current_module(), file)
 end
 
 diving_transformer(code_function) =
