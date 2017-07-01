@@ -16,13 +16,16 @@ gather_includes(code::Vector) =
         end
     end
 
+module_definition_file(mod_name::String) =
+    Base.find_in_node_path(mod_name, nothing, 1)
+
 """    gather_all_module_files(mod_name::String)
 
 Given a module name (as a string), returns the list of all files that define
 this module (i.e. the module name + all included files, applied recursively)
 """
 function gather_all_module_files(mod_name::String)
-    mod_path = Base.find_in_node_path(mod_name, nothing, 1)
+    mod_path = module_definition_file(mod_name)
     included_files = Set{String}([mod_path]) # to be filled
     gather(full_path, parse_fun) = 
         cd(dirname(full_path)) do
@@ -37,6 +40,18 @@ function gather_all_module_files(mod_name::String)
     end
     map(rec, gather(mod_path, mod->parse_module_file(mod)[2]))
     return included_files
+end
+
+
+""" `module_code(mod_name::String)` returns a vector of
+`(filename::String, code::Vector)` tuple, for each
+module-defining file (i.e. the main module file + all included files). The
+tuple with module-defining code excludes the `module module_name` markers, and just
+returns the content. """
+function module_code(mod_name::String)
+    main_file = module_definition_file(mod_name)
+    [(filename, filename==main_file ? parse_module_file(filename) : parse_file(filename))
+     for filename in gather_all_module_files(mod_name)]
 end
 
 
