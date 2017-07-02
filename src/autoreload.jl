@@ -16,8 +16,10 @@ gather_includes(code::Vector) =
         end
     end
 
-module_definition_file(mod_name::String) =
-    Base.find_in_node_path(mod_name, nothing, 1)
+module_name(mod::String) = mod
+module_name(mod::Module) = string(mod)
+
+module_definition_file(mod) = Base.find_in_node_path(module_name(mod), nothing, 1)
 
 """    gather_all_module_files(mod_name::String)
 
@@ -27,8 +29,8 @@ this module (i.e. the module name + all included files, applied recursively).
 IMPORTANT: we only return and follow `include("somestring")`. We give up on things like:
 `include(joinpath(dirname(@__FILE__), "..", "deps","depsutils.jl"))`
 """
-function gather_all_module_files(mod_name::String)
-    mod_path = module_definition_file(mod_name)
+function gather_all_module_files(mod)
+    mod_path = module_definition_file(mod)
     included_files = Set{String}([mod_path]) # to be filled
     gather(full_path, parse_fun) = 
         cd(dirname(full_path)) do
@@ -52,7 +54,7 @@ end
 module-defining file (i.e. the main module file + all included files). The
 tuple with module-defining code excludes the `module module_name` markers, and just
 returns the content. """
-function module_code(mod_name::String)
+function module_code(mod)
     main_file = module_definition_file(mod_name)
     [(filename, filename==main_file ? parse_module_file(filename) : parse_file(filename))
      for filename in gather_all_module_files(mod_name)]

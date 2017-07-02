@@ -5,7 +5,8 @@ module ClobberingReload
 using MacroTools
 using MacroTools: postwalk
 
-export creload, creload_strip, creload_diving
+export creload, creload_strip, creload_diving, apply_code!, revert_code!,
+    update_code_revertible_fn, RevertibleCodeUpdate, CodeUpdate
 
 include("scrub_stderr.jl")
 
@@ -149,6 +150,58 @@ diving_transformer(code_function) =
 to the module's code (as a vector), and to every included file. """
 creload_diving(code_function::Function, mod_name) =
     creload(diving_transformer(code_function), mod_name)
+
+################################################################################
+
+struct EvalableCode
+    expr::Expr
+    mod::Module
+    file::Union{String, Void}
+end
+apply_code!(ec::EvalableCode) = run_code_in(ec.expr, ec.mod, ec.file)
+
+struct CodeUpdate
+    ecs::Vector{EvalableCode}
+end
+apply_code!(cu::CodeUpdate) = map(apply_code!, cu.ecs)
+
+struct RevertibleCodeUpdate
+    apply::CodeUpdate
+    revert::CodeUpdate
+end
+apply_code!(rcu::RevertibleCodeUpdate) = apply_code!(rc.apply)
+revert_code!(rcu::RevertibleCodeUpdate) = apply_code!(rc.revert)
+function (rcu::RevertibleCodeUpdate)(fn::Function)
+    apply_code!(rcu)
+    try
+        fn()
+    finally
+        revert_code!(rcu)
+    end
+end
+
+parse_file_mod(file, mod) = (file == module_definition_file(mod) ?
+                             parse_module_file(file) : parse_file(file))
+
+update_code_fn(fn::Function, mod::Module) =
+    CodeUpdate([EvalableCode(fn(parse_file_mod(file, mod)), mod, file)
+                for file in gather_all_module_files(string(mod))])
+
+
+update_code_many_fn(fn::Function, mod::Module) =
+    map(CodeUpdate, zip(([EvalableCode(newcode, mod, file)
+                          for newcode in fn(parse_file_mod(file, mod))]
+                         for file in gather_all_module_files(string(mod)))...))
+
+update_code_revertible_fn(fn::Function, mod) =
+    RevertibleCodeUpdate(update_code_many_fn(mod) do code
+        res = fn(code)
+        if res === nothing
+            (nothing, nothing)
+        else
+            (res, code)
+        end
+    end...)
 
 include("autoreload.jl")
 
