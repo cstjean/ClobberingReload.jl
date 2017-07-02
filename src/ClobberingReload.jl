@@ -169,8 +169,8 @@ struct RevertibleCodeUpdate
     apply::CodeUpdate
     revert::CodeUpdate
 end
-apply_code!(rcu::RevertibleCodeUpdate) = apply_code!(rc.apply)
-revert_code!(rcu::RevertibleCodeUpdate) = apply_code!(rc.revert)
+apply_code!(rcu::RevertibleCodeUpdate) = apply_code!(rcu.apply)
+revert_code!(rcu::RevertibleCodeUpdate) = apply_code!(rcu.revert)
 function (rcu::RevertibleCodeUpdate)(fn::Function)
     apply_code!(rcu)
     try
@@ -184,24 +184,28 @@ parse_file_mod(file, mod) = (file == module_definition_file(mod) ?
                              parse_module_file(file) : parse_file(file))
 
 update_code_fn(fn::Function, mod::Module) =
-    CodeUpdate([EvalableCode(fn(parse_file_mod(file, mod)), mod, file)
+    CodeUpdate([EvalableCode(map(fn, parse_file_mod(file, mod)), mod, file)
                 for file in gather_all_module_files(string(mod))])
 
 
 update_code_many_fn(fn::Function, mod::Module) =
-    map(CodeUpdate, zip(([EvalableCode(newcode, mod, file)
-                          for newcode in fn(parse_file_mod(file, mod))]
-                         for file in gather_all_module_files(string(mod)))...))
+    # That code is too smart for its own good :|
+    map(CodeUpdate ∘ collect,
+        zip(([EvalableCode(quote $(newcode...) end, mod, file)
+              for newcode in zip(map(fn, parse_file_mod(file, mod))...)]
+             for file in gather_all_module_files(string(mod)))...))
 
-update_code_revertible_fn(fn::Function, mod) =
-    RevertibleCodeUpdate(update_code_many_fn(mod) do code
+function update_code_revertible_fn(fn::Function, mod)
+    apply, revert = update_code_many_fn(mod) do code
         res = fn(code)
         if res === nothing
             (nothing, nothing)
         else
             (res, code)
         end
-    end...)
+    end
+    return RevertibleCodeUpdate(apply, revert)
+end
 
 include("autoreload.jl")
 
