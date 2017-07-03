@@ -175,19 +175,19 @@ end
 
 ################################################################################
 
-struct EvalableCode
+immutable EvalableCode
     expr::Expr
     mod::Module
     file::Union{String, Void}
 end
 apply_code!(ec::EvalableCode) = run_code_in(ec.expr, ec.mod, ec.file)
 
-struct CodeUpdate
+immutable CodeUpdate
     ecs::Vector{EvalableCode}
 end
 apply_code!(cu::CodeUpdate) = map(apply_code!, cu.ecs)
 
-struct RevertibleCodeUpdate
+immutable RevertibleCodeUpdate
     apply::CodeUpdate
     revert::CodeUpdate
 end
