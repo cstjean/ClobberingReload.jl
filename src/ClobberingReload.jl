@@ -63,13 +63,6 @@ function withpath(f, path)
   end
 end
 
-withpath_cd(f, path) =
-    cd(dirname(abspath(path))) do
-        withpath(path) do
-            f()
-        end
-    end
-
 get_module(mod_name::Symbol) = eval(Main, mod_name)
 get_module(mod::Module) = mod
 
@@ -78,7 +71,7 @@ in module `mod`, in file `in_file`. It also moves to the `in_file` directory if 
 so that `include` works. """
 function run_code_in(code::Vector, mod, in_file=nothing)
     if in_file !== nothing
-        return withpath_cd(in_file::String) do
+        return withpath(in_file::String) do
             run_code_in(code, mod)
         end
     end
@@ -108,7 +101,7 @@ function creload(code_function::Function, mod_name::String)
     if mod_path === nothing
         error("Cannot find path of module $mod_name. To be reloadable, the module has to be defined in a file called $mod_name.jl, and that file's directory must be pushed onto the LOAD_PATH")
     end
-    withpath_cd(mod_path::String) do
+    withpath(mod_path::String) do
         # real_mod_name is in case that the module name differs from the file name,
         # but... I'm not sure that makes any difference. Maybe we should just assert
         # that they're the same.
