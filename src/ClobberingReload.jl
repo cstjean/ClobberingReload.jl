@@ -20,6 +20,11 @@ function parse_file(filename)
         ex, pos = parse(str, pos)
         push!(exprs, ex)
     end
+    for expr in exprs
+        if expr isa Expr
+            add_filename!(expr, Symbol(filename))
+        end
+    end
     return exprs
 end
 
@@ -143,6 +148,30 @@ diving_transformer(code_function) =
 to the module's code (as a vector), and to every included file. """
 creload_diving(code_function::Function, mod_name) =
     creload(diving_transformer(code_function), mod_name)
+
+################################################################################
+# From Tim Holy's Revise.jl
+# https://github.com/timholy/Revise.jl/blob/master/src/Revise.jl
+
+function add_filename!(ex::Expr, file::Symbol)
+    if ex.head == :line
+        ex.args[2] = file
+    else
+        for (i, a) in enumerate(ex.args)
+            if isa(a, Expr)
+                add_filename!(a::Expr, file)
+            elseif isa(a, LineNumberNode)
+                ex.args[i] = add_filename(a::LineNumberNode, file)
+            end
+        end
+    end
+    ex
+end
+if VERSION < v"0.7.0-DEV.328"
+    add_filename(lnn::LineNumberNode, file::Symbol) = lnn
+else
+    add_filename(lnn::LineNumberNode, file::Symbol) = LineNumberNode(lnn.line, file)
+end
 
 ################################################################################
 
