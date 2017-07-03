@@ -6,7 +6,7 @@ using MacroTools
 using MacroTools: postwalk
 
 export creload, creload_strip, creload_diving, apply_code!, revert_code!,
-    update_code_revertible_fn, RevertibleCodeUpdate, CodeUpdate
+    update_code_revertible_fn, RevertibleCodeUpdate, CodeUpdate, EvalableCode
 
 include("scrub_stderr.jl")
 
@@ -189,7 +189,8 @@ update_code_fn(fn::Function, mod::Module) =
 
 
 update_code_many_fn(fn::Function, mod::Module) =
-    # That code is too smart for its own good :|
+    # That one-liner is too complex :|
+    # Also TODO: check that the every tuple of the zip transposes have the same length.
     map(CodeUpdate ∘ collect,
         zip(([EvalableCode(quote $(newcode...) end, mod, file)
               for newcode in zip(map(fn, parse_file_mod(file, mod))...)]
