@@ -19,7 +19,7 @@ with some warnings silenced.
 
 See below for usage information, and the docstrings for details (eg. `?creload`)
 
-ClobberingReload borrows some code and interface from [Autoreload.jl](https://github.com/malmaud/Autoreload.jl) by Jon Malmaud, and from [Revise.jl](https://github.com/timholy/Revise.jl) by Tim Holy.
+ClobberingReload borrows some code and interface from [Autoreload.jl](https://github.com/malmaud/Autoreload.jl) by Jon Malmaud, and from [Revise.jl](https://github.com/timholy/Revise.jl) by Tim Holy (which offers similar functionality under a different interface).
 
 ## Using `creload`
 
@@ -71,7 +71,7 @@ println(Bar.life_the_universe())
 > 42
 ```
 
-The Julia REPL [does not have execution hooks yet](https://github.com/JuliaLang/julia/issues/6445), but you can still trigger the autoreload feature for `@aimport`ed modules by calling `areload()` manually.
+The Julia REPL [does not have execution hooks yet](https://github.com/JuliaLang/julia/issues/6445), but you can still trigger the autoreload feature for `@aimport`ed modules by calling `areload()` manually. Or you can use [Revise.jl](https://github.com/timholy/Revise.jl), which works around this issue by scheduling a background thread.
 
 ## Silencing warnings
 
