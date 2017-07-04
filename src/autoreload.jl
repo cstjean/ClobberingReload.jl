@@ -16,10 +16,10 @@ gather_includes(code::Vector) =
         end
     end
 
-module_name(mod::String) = mod
-module_name(mod::Module) = string(mod)
+module_string(mod::String) = mod
+module_string(mod::Module) = string(mod)
 
-module_definition_file(mod) = Base.find_in_node_path(module_name(mod), nothing, 1)
+module_definition_file(mod) = Base.find_in_node_path(module_string(mod), nothing, 1)
 
 """    gather_all_module_files(mod_name::String)
 
