@@ -17,7 +17,7 @@ gather_includes(code::Vector) =
     end
 
 module_string(mod::String) = mod
-module_string(mod::Module) = string(mod)
+module_string(mod::Module) = string(module_name(mod))
 
 module_definition_file(mod) = Base.find_in_node_path(module_string(mod), nothing, 1)
 
