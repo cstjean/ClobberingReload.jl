@@ -203,7 +203,7 @@ function (rcu::RevertibleCodeUpdate)(fn::Function)
 end
 
 parse_file_mod(file, mod) = (file == module_definition_file(mod) ?
-                             parse_module_file(file) : parse_file(file))
+                             parse_module_file(file)[2] : parse_file(file))
 
 update_code_fn(fn::Function, mod::Module) =
     CodeUpdate([EvalableCode(map(fn, parse_file_mod(file, mod)), mod, file)
