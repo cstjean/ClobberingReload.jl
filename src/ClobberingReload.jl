@@ -210,20 +210,25 @@ end
 parse_file_mod(file, mod) = (file == module_definition_file(mod) ?
                              parse_module_file(file)[2] : parse_file(file))
 
+""" `update_code_fn(fn::Function, mod::Module)` applies `fn` to every expression
+in every file of the module, and returns a `CodeUpdate` with the result. """
 update_code_fn(fn::Function, mod::Module) =
     CodeUpdate([EvalableCode(map(fn, parse_file_mod(file, mod)), mod, file)
                 for file in gather_all_module_files(string(mod))])
 
 
+""" `update_code_many_fn(fn::Function, mod::Module)` applies `fn` to every expression
+in every file of the module, expects a tuple of Expr to be returned, and returns a
+corresponding tuple of `CodeUpdate`. """
 update_code_many_fn(fn::Function, mod::Module) =
     # TODO: check that the every tuple of the zip transposes have the same length.
-    map(CodeUpdate ∘ collect,
-        zip((update_code_many_fn(fn, mod, file).ecs
-             for file in gather_all_module_files(string(mod)))...))
+    Tuple(merge(cus...)
+          for cus in zip((update_code_many_fn(fn, mod, file)
+                          for file in gather_all_module_files(string(mod)))...))
 
 update_code_many_fn(fn::Function, mod::Module, file::String) =
-    CodeUpdate([EvalableCode(quote $(newcode...) end, mod, file)
-                for newcode in zip(map(fn, parse_file_mod(file, mod))...)])
+    Tuple(CodeUpdate([EvalableCode(quote $(newcode...) end, mod, file)])
+          for newcode in zip(map(fn, parse_file_mod(file, mod))...))
 
 function update_code_revertible_fn(fn::Function, mod,
                                    args...) # to support specifying which file
