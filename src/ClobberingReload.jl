@@ -185,12 +185,17 @@ apply_code!(ec::EvalableCode) = run_code_in(ec.expr, ec.mod, ec.file)
 immutable CodeUpdate
     ecs::Vector{EvalableCode}
 end
+Base.merge(cu1::CodeUpdate, cus::CodeUpdate...) =
+    CodeUpdate(mapreduce(cu->cu.ecs, vcat, cu1.ecs, cus))
 apply_code!(cu::CodeUpdate) = map(apply_code!, cu.ecs)
 
 immutable RevertibleCodeUpdate
     apply::CodeUpdate
     revert::CodeUpdate
 end
+Base.merge(rcu1::RevertibleCodeUpdate, rcus::RevertibleCodeUpdate...) =
+    RevertibleCodeUpdate(merge((rcu.apply for rcu in (rcu1, rcus...))...),
+                         merge((rcu.revert for rcu in (rcu1, rcus...))...))
 apply_code!(rcu::RevertibleCodeUpdate) = apply_code!(rcu.apply)
 revert_code!(rcu::RevertibleCodeUpdate) = apply_code!(rcu.revert)
 function (rcu::RevertibleCodeUpdate)(fn::Function)
