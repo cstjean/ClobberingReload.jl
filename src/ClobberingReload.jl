@@ -211,15 +211,18 @@ update_code_fn(fn::Function, mod::Module) =
 
 
 update_code_many_fn(fn::Function, mod::Module) =
-    # That one-liner is too complex :|
-    # Also TODO: check that the every tuple of the zip transposes have the same length.
+    # TODO: check that the every tuple of the zip transposes have the same length.
     map(CodeUpdate ∘ collect,
-        zip(([EvalableCode(quote $(newcode...) end, mod, file)
-              for newcode in zip(map(fn, parse_file_mod(file, mod))...)]
+        zip((update_code_many_fn(fn, mod, file).ecs
              for file in gather_all_module_files(string(mod)))...))
 
-function update_code_revertible_fn(fn::Function, mod)
-    apply, revert = update_code_many_fn(mod) do code
+update_code_many_fn(fn::Function, mod::Module, file::String) =
+    CodeUpdate([EvalableCode(quote $(newcode...) end, mod, file)
+                for newcode in zip(map(fn, parse_file_mod(file, mod))...)])
+
+function update_code_revertible_fn(fn::Function, mod,
+                                   args...) # to support specifying which file
+    apply, revert = update_code_many_fn(mod, args...) do code
         res = fn(code)
         if res === nothing
             (nothing, nothing)
