@@ -35,7 +35,7 @@ function gather_all_module_files(mod)
     gather(full_path, parse_fun) = 
         cd(dirname(full_path)) do
             mod_includes = map(abspath,
-                               filter(x->x isa String,
+                               filter(x->isa(x, String),
                                       gather_includes(parse_fun(basename(full_path)))))
         end
     function rec(path::String)
