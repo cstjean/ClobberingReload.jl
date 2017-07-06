@@ -21,7 +21,7 @@ function parse_file(filename)
         push!(exprs, ex)
     end
     for expr in exprs
-        if expr isa Expr
+        if isa(expr, Expr)
             add_filename!(expr, Symbol(filename))
         end
     end
