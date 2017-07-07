@@ -200,10 +200,13 @@ Base.merge(rcu1::RevertibleCodeUpdate, rcus::RevertibleCodeUpdate...) =
                          merge((rcu.revert for rcu in (rcu1, rcus...))...))
 apply_code!(rcu::RevertibleCodeUpdate) = apply_code!(rcu.apply)
 revert_code!(rcu::RevertibleCodeUpdate) = apply_code!(rcu.revert)
-function (rcu::RevertibleCodeUpdate)(fn::Function)
-    apply_code!(rcu)
+function (rcu::RevertibleCodeUpdate)(body_fn::Function)
     try
-        fn()
+        # It's safer to have the `apply_code!` inside the try, because we should be
+        # able to assume that running `revert_code!` is harmless even if apply_code!
+        # had an error half-way through.
+        apply_code!(rcu)
+        body_fn()
     finally
         revert_code!(rcu)
     end
