@@ -8,6 +8,7 @@ using MacroTools: postwalk
 export creload, creload_strip, creload_diving, apply_code!, revert_code!,
     update_code_revertible, RevertibleCodeUpdate, CodeUpdate, EvalableCode
 
+include("fundef.jl") # hopefully temporary
 include("scrub_stderr.jl")
 
 """ `parse_file(filename)` returns the expressions in `filename` as a
@@ -186,6 +187,7 @@ immutable CodeUpdate
     ecs::Vector{EvalableCode}
 end
 Base.merge(cu1::CodeUpdate, cus::CodeUpdate...) =
+    # We could conceivably merge the EvalableCode objects that share the same (mod, file)
     CodeUpdate(mapreduce(cu->cu.ecs, vcat, cu1.ecs, cus))
 apply_code!(cu::CodeUpdate) = map(apply_code!, cu.ecs)
 
