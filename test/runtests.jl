@@ -31,5 +31,5 @@ areload()
 if VERSION >= v"0.6.0"
     using ParametricTypeAlias
     creload_strip("ParametricTypeAlias")
-    @assert Int[1,2,3] isa ParametricTypeAlias.MyVector{Int}
+    @test Int[1,2,3] isa ParametricTypeAlias.MyVector{Int}
 end

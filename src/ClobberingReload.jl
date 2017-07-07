@@ -6,7 +6,7 @@ using MacroTools
 using MacroTools: postwalk
 
 export creload, creload_strip, creload_diving, apply_code!, revert_code!,
-    update_code_revertible_fn, RevertibleCodeUpdate, CodeUpdate, EvalableCode
+    update_code_revertible, RevertibleCodeUpdate, CodeUpdate, EvalableCode
 
 include("scrub_stderr.jl")
 
@@ -210,29 +210,29 @@ end
 parse_file_mod(file, mod) = (file == module_definition_file(mod) ?
                              parse_module_file(file)[2] : parse_file(file))
 
-""" `update_code_fn(fn::Function, mod::Module)` applies `fn` to every expression
+""" `update_code(fn::Function, mod::Module)` applies `fn` to every expression
 in every file of the module, and returns a `CodeUpdate` with the result. """
-update_code_fn(fn::Function, mod::Module) =
+update_code(fn::Function, mod::Module) =
     CodeUpdate([EvalableCode(map(fn, parse_file_mod(file, mod)), mod, file)
                 for file in gather_all_module_files(string(mod))])
 
 
-""" `update_code_many_fn(fn::Function, mod::Module)` applies `fn` to every expression
+""" `update_code_many(fn::Function, mod::Module)` applies `fn` to every expression
 in every file of the module, expects a tuple of Expr to be returned, and returns a
 corresponding tuple of `CodeUpdate`. """
-update_code_many_fn(fn::Function, mod::Module) =
+update_code_many(fn::Function, mod::Module) =
     # TODO: check that the every tuple of the zip transposes have the same length.
     Tuple(merge(cus...)
-          for cus in zip((update_code_many_fn(fn, mod, file)
+          for cus in zip((update_code_many(fn, mod, file)
                           for file in gather_all_module_files(string(mod)))...))
 
-update_code_many_fn(fn::Function, mod::Module, file::String) =
+update_code_many(fn::Function, mod::Module, file::String) =
     Tuple(CodeUpdate([EvalableCode(quote $(newcode...) end, mod, file)])
           for newcode in zip(map(fn, parse_file_mod(file, mod))...))
 
-function update_code_revertible_fn(fn::Function, mod,
-                                   args...) # to support specifying which file
-    apply, revert = update_code_many_fn(mod, args...) do code
+function update_code_revertible(fn::Function, mod,
+                                args...) # to support specifying which file
+    apply, revert = update_code_many(mod, args...) do code
         res = fn(code)
         if res === nothing
             (nothing, nothing)
