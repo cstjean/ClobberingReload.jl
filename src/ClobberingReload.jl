@@ -206,7 +206,7 @@ function (rcu::RevertibleCodeUpdate)(body_fn::Function)
         # able to assume that running `revert_code!` is harmless even if apply_code!
         # had an error half-way through.
         apply_code!(rcu)
-        body_fn()
+        @eval $body_fn()   # necessary to @eval because of world age
     finally
         revert_code!(rcu)
     end

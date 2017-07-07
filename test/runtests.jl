@@ -33,3 +33,22 @@ if VERSION >= v"0.6.0"
     creload_strip("ParametricTypeAlias")
     @test isa(Int[1,2,3], ParametricTypeAlias.MyVector{Int})
 end
+
+################################################################################
+# RevertibleCodeUpdate
+
+counter = fill(0)
+upd = update_code_revertible(AA.high) do code
+    di = ClobberingReload.splitdef(code)
+    di[:body] = quote $counter .+= 1; $(di[:body]) end
+    ClobberingReload.combinedef(di)
+end
+@test AA.high(1) == 10
+@test counter[] == 0
+upd() do
+    @test AA.high(1) == 10
+    @test AA.high(1.0) == 2
+end
+@test AA.high(1) == 10
+@test AA.bar(1.0) == 2
+@test counter[] == 2    # only the two calls within `upd` increased the counter
