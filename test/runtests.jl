@@ -38,17 +38,28 @@ end
 # RevertibleCodeUpdate
 
 counter = fill(0)
-upd = update_code_revertible(AA.high) do code
-    di = ClobberingReload.splitdef(code)
+function add_counter(fdef)
+    di = ClobberingReload.splitdef(fdef)
     di[:body] = quote $counter .+= 1; $(di[:body]) end
     ClobberingReload.combinedef(di)
 end
+upd_high = update_code_revertible(AA.high) do code
+    add_counter(code)
+end
+upd_module = update_code_revertible(AA) do code
+    if ClobberingReload.is_function_definition(code) add_counter(code) end
+end
 @test AA.high(1) == 10
 @test counter[] == 0
-upd() do
+upd_high() do
     @test AA.high(1) == 10
     @test AA.high(1.0) == 2
 end
 @test AA.high(1) == 10
 @test AA.bar(1.0) == 2
-@test counter[] == 2    # only the two calls within `upd` increased the counter
+@test counter[] == 2 # only the two calls within `upd` increase the counter
+upd_module() do
+    @test AA.high(1) == 10
+    @test AA.high(1.0) == 2
+end
+@test counter[] == 5 # three calls, since `bar` also becomes counting
