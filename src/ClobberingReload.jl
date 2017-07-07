@@ -6,7 +6,7 @@ using MacroTools
 using MacroTools: postwalk
 
 export creload, creload_strip, creload_diving, apply_code!, revert_code!,
-    update_code_revertible, RevertibleCodeUpdate, CodeUpdate, EvalableCode
+    update_code_revertible, RevertibleCodeUpdate, CodeUpdate, EvalableCode, source
 
 include("fundef.jl") # hopefully temporary
 include("scrub_stderr.jl")
@@ -73,8 +73,7 @@ get_module(mod_name::Symbol) = eval(Main, mod_name)
 get_module(mod::Module) = mod
 
 """ `run_code_in(code::Vector, mod, in_file=nothing)` executes `code` as if it was defined
-in module `mod`, in file `in_file`. It also moves to the `in_file` directory if specified,
-so that `include` works. """
+in module `mod`, in file `in_file`. """
 function run_code_in(code::Vector, mod, in_file=nothing)
     if in_file !== nothing
         return withpath(in_file::String) do
@@ -218,6 +217,7 @@ parse_file_mod(file, mod) = (file == module_definition_file(mod) ?
 """ `update_code(fn::Function, mod::Module)` applies `fn` to every expression
 in every file of the module, and returns a `CodeUpdate` with the result. """
 update_code(fn::Function, mod::Module) =
+    # Note: this was never used so far - July '17
     CodeUpdate([EvalableCode(map(fn, parse_file_mod(file, mod)), mod, file)
                 for file in gather_all_module_files(string(mod))])
 
@@ -227,13 +227,14 @@ in every file of the module, expects a tuple of Expr to be returned, and returns
 corresponding tuple of `CodeUpdate`. """
 update_code_many(fn::Function, mod::Module) =
     # TODO: check that the every tuple of the zip transposes have the same length.
-    Tuple(merge(cus...)
-          for cus in zip((update_code_many(fn, mod, file)
-                          for file in gather_all_module_files(string(mod)))...))
+    # Note: Tuple(generator) syntax is 0.6-only
+    tuple((merge(cus...)
+           for cus in zip((update_code_many(fn, mod, file)
+                           for file in gather_all_module_files(string(mod)))...))...)
 
 update_code_many(fn::Function, mod::Module, file::String) =
-    Tuple(CodeUpdate([EvalableCode(quote $(newcode...) end, mod, file)])
-          for newcode in zip(map(fn, parse_file_mod(file, mod))...))
+    tuple((CodeUpdate([EvalableCode(quote $(newcode...) end, mod, file)])
+           for newcode in zip(map(fn, parse_file_mod(file, mod))...))...)
 
 function update_code_revertible(fn::Function, mod::Module,
                                 args...) # to support specifying which file
@@ -248,6 +249,9 @@ function update_code_revertible(fn::Function, mod::Module,
     return RevertibleCodeUpdate(apply, revert)
 end
 
+################################################################################
+# These should go into MacroTools/ExprTools
+
 is_function_definition(expr::Expr) = longdef1(expr).head == :function
 is_function_definition(::Any) = false
 
@@ -255,10 +259,16 @@ is_function_definition(::Any) = false
 `fundef` is defining. This code works only when the Function already exists. """
 get_function(mod::Module, fundef::Expr)::Function = eval(mod, splitdef(fundef)[:name])
 
+is_call_definition(fundef) = @capture(splitdef(fundef)[:name], (a_::b_) | (::b_))
+
+################################################################################
+
 function update_code_revertible(new_code_fn::Function, mod::Module,
                                 file::String, fn_to_change::Function)
     update_code_revertible(mod, file) do expr
-        if is_function_definition(expr) && get_function(mod, expr) == fn_to_change
+        if (is_function_definition(expr) &&
+            !is_call_definition(expr) &&
+            get_function(mod, expr) == fn_to_change)
             new_code_fn(expr)
         else nothing end
     end
@@ -268,6 +278,18 @@ update_code_revertible(new_code_fn::Function, fn_to_change::Function) =
     merge((update_code_revertible(new_code_fn, mod, string(file), fn_to_change) 
            for (mod, file) in Set((m.module, m.file)
                                   for m in methods(fn_to_change).ms))...)
+
+function source(obj::Union{Module, Function})
+    code = []
+    # It's (negligibly) wasteful to use `update_code_revertible` when all we want is
+    # to get the Module's or the Function's definitions, but I'm not even sure that a
+    # refactor would be _that_ much cleaner. - June'17
+    update_code_revertible(obj) do expr
+        push!(code, expr)
+        nothing
+    end
+    code
+end
 
 include("autoreload.jl")
 
