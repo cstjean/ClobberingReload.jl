@@ -11,10 +11,9 @@ export creload, creload_strip, creload_diving, apply_code!, revert_code!,
 include("fundef.jl") # hopefully temporary
 include("scrub_stderr.jl")
 
-function counter(seq)  # could use DataStructures.counter, but it's a big dependency
-    di = Dict()
-    for x in seq; di[x] = get(di, x, 0) + 1 end
-    di
+function only(collection)
+    @assert length(collection)==1 "only: `collection` was expected to contain one element; contains $(length(collection))"
+    return first(collection)
 end
 
 """ `parse_file(filename)` returns the expressions in `filename` as a
@@ -282,19 +281,38 @@ function update_code_revertible(new_code_fn::Function, mod::Module,
     end
 end
 
-update_code_revertible(new_code_fn::Function, fn_to_change::Function) =
-    merge((update_code_revertible(new_code_fn, mod, string(file), fn_to_change) 
-           for ((mod, file), count) in counter((m.module, m.file)
-                                               for m in methods(fn_to_change).ms))...)
+function counter(seq)  # could use DataStructures.counter, but it's a big dependency
+    di = Dict()
+    for x in seq; di[x] = get(di, x, 0) + 1 end
+    di
+end
 
-function source(obj::Union{Module, Function})
+method_file_counts(fn_to_change) = counter((m.module, m.file)
+                                           for m in methods(fn_to_change).ms)
+
+function update_code_revertible(new_code_fn::Function, fn_to_change::Function;
+                                when_missing=warn)
+    function check(rcu, correct_count, file)
+        # Emit a warning/error if some of the methods couldn't be updated.
+        count = length(only(rcu.revert.ecs)) # how many methods were updated
+        if count != correct_count && !(when_missing in (false, nothing))
+            when_missing("Could only find $count/$correct_count methods of $fn_to_change in $file")
+        end
+        rcu
+    end
+    merge((check(update_code_revertible(new_code_fn, mod, string(file), fn_to_change),
+                 count, file)
+           for ((mod, file), count) in method_file_counts(fn_to_change))...)
+end
+
+function source(obj::Union{Module, Function}; kwargs...)
     code = []
     # It's (negligibly) wasteful and ugly to use `update_code_revertible` when all we
     # want is to get the Module's or the Function's definitions, but I doubt that a
     # refactor would be any cleaner. - June'17
-    update_code_revertible(obj) do expr
+    update_code_revertible(obj; kwargs...) do expr
         push!(code, expr)
-        nothing
+        :(one(1)) # needs an expr to get correct `length` in update_code_revertible
     end
     code
 end
