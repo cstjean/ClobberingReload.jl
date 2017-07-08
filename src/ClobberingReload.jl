@@ -182,11 +182,12 @@ end
 ################################################################################
 
 immutable EvalableCode
-    expr::Expr
+    code::Vector{Expr}
     mod::Module
     file::Union{String, Void}
 end
-apply_code!(ec::EvalableCode) = run_code_in(ec.expr, ec.mod, ec.file)
+apply_code!(ec::EvalableCode) = run_code_in(ec.code, ec.mod, ec.file)
+Base.length(ec::EvalableCode) = length(ec.code)
 
 immutable CodeUpdate
     ecs::Vector{EvalableCode}
@@ -238,24 +239,10 @@ update_code_many(fn::Function, mod::Module) =
            for cus in zip((update_code_many(fn, mod, file)
                            for file in gather_all_module_files(string(mod)))...))...)
 
-isnotvoid(x) = x !== nothing  # In 0.7, filter(!isvoid, x) will work
 update_code_many(fn::Function, mod::Module, file::String) =
-    tuple((CodeUpdate([EvalableCode(quote $(Iterators.filter(isnotvoid, newcode)...) end,
+    tuple((CodeUpdate([EvalableCode(Expr[c for c in newcode if c !== nothing],
                                     mod, file)])
            for newcode in zip(map(fn, parse_file_mod(file, mod))...))...)
-
-function update_code_revertible(fn::Function, mod::Module,
-                                args...) # to support specifying which file
-    apply, revert = update_code_many(mod, args...) do code
-        res = fn(code)
-        if res === nothing
-            (nothing, nothing)
-        else
-            (res, code)
-        end
-    end
-    return RevertibleCodeUpdate(apply, revert)
-end
 
 ################################################################################
 # These should go into MacroTools/ExprTools
@@ -270,6 +257,19 @@ get_function(mod::Module, fundef::Expr)::Function = eval(mod, splitdef(fundef)[:
 is_call_definition(fundef) = @capture(splitdef(fundef)[:name], (a_::b_) | (::b_))
 
 ################################################################################
+
+function update_code_revertible(fn::Function, mod::Module,
+                                args...) # to support specifying which file
+    apply, revert = update_code_many(mod, args...) do code
+        res = fn(code)
+        if res === nothing
+            (nothing, nothing)
+        else
+            (res, code)
+        end
+    end
+    return RevertibleCodeUpdate(apply, revert)
+end
 
 function update_code_revertible(new_code_fn::Function, mod::Module,
                                 file::String, fn_to_change::Function)
