@@ -11,6 +11,12 @@ export creload, creload_strip, creload_diving, apply_code!, revert_code!,
 include("fundef.jl") # hopefully temporary
 include("scrub_stderr.jl")
 
+function counter(seq)  # could use DataStructures.counter, but it's a big dependency
+    di = Dict()
+    for x in seq; di[x] = get(di, x, 0) + 1 end
+    di
+end
+
 """ `parse_file(filename)` returns the expressions in `filename` as a
 `Vector` of expressions """
 function parse_file(filename)
@@ -232,8 +238,10 @@ update_code_many(fn::Function, mod::Module) =
            for cus in zip((update_code_many(fn, mod, file)
                            for file in gather_all_module_files(string(mod)))...))...)
 
+isnotvoid(x) = x !== nothing  # In 0.7, filter(!isvoid, x) will work
 update_code_many(fn::Function, mod::Module, file::String) =
-    tuple((CodeUpdate([EvalableCode(quote $(newcode...) end, mod, file)])
+    tuple((CodeUpdate([EvalableCode(quote $(Iterators.filter(isnotvoid, newcode)...) end,
+                                    mod, file)])
            for newcode in zip(map(fn, parse_file_mod(file, mod))...))...)
 
 function update_code_revertible(fn::Function, mod::Module,
@@ -276,14 +284,14 @@ end
 
 update_code_revertible(new_code_fn::Function, fn_to_change::Function) =
     merge((update_code_revertible(new_code_fn, mod, string(file), fn_to_change) 
-           for (mod, file) in Set((m.module, m.file)
-                                  for m in methods(fn_to_change).ms))...)
+           for ((mod, file), count) in counter((m.module, m.file)
+                                               for m in methods(fn_to_change).ms))...)
 
 function source(obj::Union{Module, Function})
     code = []
-    # It's (negligibly) wasteful to use `update_code_revertible` when all we want is
-    # to get the Module's or the Function's definitions, but I'm not even sure that a
-    # refactor would be _that_ much cleaner. - June'17
+    # It's (negligibly) wasteful and ugly to use `update_code_revertible` when all we
+    # want is to get the Module's or the Function's definitions, but I doubt that a
+    # refactor would be any cleaner. - June'17
     update_code_revertible(obj) do expr
         push!(code, expr)
         nothing
