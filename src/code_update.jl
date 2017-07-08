@@ -6,6 +6,7 @@ immutable EvalableCode
     mod::Module
     file::Union{String, Void}
 end
+EvalableCode(code::Expr, mod::Module, file) = EvalableCode([code], mod, file)
 apply_code!(ec::EvalableCode) = run_code_in(ec.code, ec.mod, ec.file)
 Base.length(ec::EvalableCode) = length(ec.code)
 
