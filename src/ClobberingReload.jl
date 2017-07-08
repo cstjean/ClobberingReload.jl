@@ -292,7 +292,8 @@ method_file_counts(fn_to_change) = counter((m.module, m.file)
 
 function update_code_revertible(new_code_fn::Function, fn_to_change::Function;
                                 when_missing=warn)
-    function check(rcu, correct_count, file)
+    function update(mod, file, correct_count)
+        rcu = update_code_revertible(new_code_fn, mod, string(file), fn_to_change)
         # Emit a warning/error if some of the methods couldn't be updated.
         count = length(only(rcu.revert.ecs)) # how many methods were updated
         if count != correct_count && !(when_missing in (false, nothing))
@@ -300,9 +301,8 @@ function update_code_revertible(new_code_fn::Function, fn_to_change::Function;
         end
         rcu
     end
-    merge((check(update_code_revertible(new_code_fn, mod, string(file), fn_to_change),
-                 count, file)
-           for ((mod, file), count) in method_file_counts(fn_to_change))...)
+    merge((update(mod, file, correct_count)
+           for ((mod, file), correct_count) in method_file_counts(fn_to_change))...)
 end
 
 function source(obj::Union{Module, Function}; kwargs...)
