@@ -200,6 +200,7 @@ immutable RevertibleCodeUpdate
     apply::CodeUpdate
     revert::CodeUpdate
 end
+EmptyRevertibleCodeUpdate() = RevertibleCodeUpdate(CodeUpdate([]), CodeUpdate([]))
 Base.merge(rcu1::RevertibleCodeUpdate, rcus::RevertibleCodeUpdate...) =
     RevertibleCodeUpdate(merge((rcu.apply for rcu in (rcu1, rcus...))...),
                          merge((rcu.revert for rcu in (rcu1, rcus...))...))
@@ -292,11 +293,15 @@ method_file_counts(fn_to_change) = counter((m.module, m.file)
 
 function update_code_revertible(new_code_fn::Function, fn_to_change::Function;
                                 when_missing=warn)
+    if when_missing in (false, nothing); when_missing = _->nothing end
     function update(mod, file, correct_count)
+        if mod == Main
+            when_missing("Cannot update methods of $fn_to_change defined interactively.")
+            return EmptyRevertibleCodeUpdate()
+        end
         rcu = update_code_revertible(new_code_fn, mod, string(file), fn_to_change)
-        # Emit a warning/error if some of the methods couldn't be updated.
         count = length(only(rcu.revert.ecs)) # how many methods were updated
-        if count != correct_count && !(when_missing in (false, nothing))
+        if count != correct_count
             when_missing("Could only find $count/$correct_count methods of $fn_to_change in $file")
         end
         rcu
