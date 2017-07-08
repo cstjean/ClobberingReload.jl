@@ -258,9 +258,8 @@ is_call_definition(fundef) = @capture(splitdef(fundef)[:name], (a_::b_) | (::b_)
 
 ################################################################################
 
-function update_code_revertible(fn::Function, mod::Module,
-                                args...) # to support specifying which file
-    apply, revert = update_code_many(mod, args...) do code
+function revertible_update_helper(fn)
+    function (code)
         res = fn(code)
         if res === nothing
             (nothing, nothing)
@@ -268,6 +267,15 @@ function update_code_revertible(fn::Function, mod::Module,
             (res, code)
         end
     end
+end
+
+function update_code_revertible(fn::Function, mod::Module)
+    if mod == Base; error("Cannot update all of Base (only specific functions/files)") end
+    apply, revert = update_code_many(revertible_update_helper(fn), mod)
+    return RevertibleCodeUpdate(apply, revert)
+end
+function update_code_revertible(fn::Function, mod::Module, file::String)
+    apply, revert = update_code_many(revertible_update_helper(fn), mod, file)
     return RevertibleCodeUpdate(apply, revert)
 end
 
