@@ -64,7 +64,8 @@ update_code_many(fn::Function, mod::Module) =
 update_code_many(fn::Function, mod::Module, file::String) =
     tuple((CodeUpdate([EvalableCode(Expr[c for c in newcode if c !== nothing],
                                     mod, file)])
-           for newcode in zip(map(fn, parse_file_mod(file, mod))...))...)
+           for newcode in zip([fn(strip_docstring(expr))
+                               for expr in parse_file_mod(file, mod)]...))...)
 
 ################################################################################
 # These should go into MacroTools/ExprTools
@@ -77,6 +78,15 @@ is_function_definition(::Any) = false
 get_function(mod::Module, fundef::Expr)::Function = eval(mod, splitdef(fundef)[:name])
 
 is_call_definition(fundef) = @capture(splitdef(fundef)[:name], (a_::b_) | (::b_))
+
+strip_docstring(x) = x
+function strip_docstring(x::Expr)
+    if x.head == :macrocall && x.args[1] == GlobalRef(Core, Symbol("@doc"))
+        strip_docstring(x.args[3])
+    else
+        x
+    end
+end
 
 ################################################################################
 
