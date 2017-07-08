@@ -291,18 +291,33 @@ end
 method_file_counts(fn_to_change) = counter((m.module, m.file)
                                            for m in methods(fn_to_change).ms)
 
+immutable UpdateInteractiveFailure
+    fn::Function
+end
+Base.show(io::IO, upd::UpdateInteractiveFailure) =
+    write(io, "Cannot handle methods of $(upd.fn) defined interactively.")
+
+immutable MissingMethodFailure
+    count::Int
+    correct_count::Int
+    fn::Function
+    file::String
+end
+Base.show(io::IO, fail::MissingMethodFailure) =
+    write(io, "Could only find $(fail.count)/$(fail.correct_count) methods of $(fail.fn) in $(fail.file)")
+
 function update_code_revertible(new_code_fn::Function, fn_to_change::Function;
                                 when_missing=warn)
     if when_missing in (false, nothing); when_missing = _->nothing end
     function update(mod, file, correct_count)
         if mod == Main
-            when_missing("Cannot update methods of $fn_to_change defined interactively.")
+            when_missing(UpdateInteractiveFailure(fn_to_change))
             return EmptyRevertibleCodeUpdate()
         end
         rcu = update_code_revertible(new_code_fn, mod, string(file), fn_to_change)
         count = length(only(rcu.revert.ecs)) # how many methods were updated
         if count != correct_count
-            when_missing("Could only find $count/$correct_count methods of $fn_to_change in $file")
+            when_missing(MissingMethodFailure(count, correct_count, fn_to_change, file))
         end
         rcu
     end
