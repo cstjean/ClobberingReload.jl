@@ -78,18 +78,21 @@ get_module(mod::Module) = mod
 
 """ `run_code_in(code::Vector, mod, in_file=nothing)` executes `code` as if it was defined
 in module `mod`, in file `in_file`. """
-function run_code_in(code::Vector, mod, in_file=nothing)
+run_code_in(code::Vector, mod, in_file=nothing) =
+    # [eval(code) for code in exprs] and eval(Expr(:toplevel, exprs...))
+    # are both 5X slower than eval(quote $(exprs...) end) as of 0.6 (tested on PyCall)
+    run_code_in(quote $(code...) end, mod, in_file)
+    
+function run_code_in(code::Expr, mod, in_file=nothing)
     if in_file !== nothing
         return withpath(in_file::String) do
             run_code_in(code, mod)
         end
     end
     scrub_redefinition_warnings() do
-        eval(get_module(mod), Expr(:toplevel, code...))
+        eval(get_module(mod), code)
     end
 end
-run_code_in(code::Expr, mod, in_file=nothing) = run_code_in([code], mod, in_file)
-
 
 """ `creload(mod_name)` reloads `mod_name` by executing the module code inside
 the **existing** module. So unlike `reload`, `creload` does not create a new
