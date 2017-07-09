@@ -128,7 +128,7 @@ function counter(seq)  # could use DataStructures.counter, but it's a big depend
     di
 end
 
-method_file_counts(fn_to_change) = counter((m.module, m.file)
+method_file_counts(fn_to_change) = counter((m.module, functionloc(m)[1])
                                            for m in methods(fn_to_change).ms)
 
 immutable UpdateInteractiveFailure

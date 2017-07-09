@@ -68,3 +68,7 @@ upd_module() do
     @test AA.high(1.0) == 2
 end
 @test counter[] == 5 # three calls, since `bar` also becomes counting
+
+################################################################################
+
+@test length(source(creload)) == 3
