@@ -135,7 +135,7 @@ immutable UpdateInteractiveFailure
     fn::Function
 end
 Base.show(io::IO, upd::UpdateInteractiveFailure) =
-    write(io, "Cannot handle methods of $(upd.fn) defined interactively.")
+    write(io, "Cannot find source of methods defined interactively ($(upd.fn)).")
 
 immutable MissingMethodFailure
     count::Int
@@ -144,7 +144,7 @@ immutable MissingMethodFailure
     file::String
 end
 Base.show(io::IO, fail::MissingMethodFailure) =
-    write(io, "Could only find $(fail.count)/$(fail.correct_count) methods of $(fail.fn) in $(fail.file)")
+    write(io, "Only $(fail.count)/$(fail.correct_count) methods of $(fail.fn) in $(fail.file) were found.")
 
 function update_code_revertible(new_code_fn::Function, fn_to_change::Function;
                                 when_missing=warn)
