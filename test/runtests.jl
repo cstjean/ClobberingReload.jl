@@ -36,10 +36,7 @@ end
 
 ################################################################################
 
-a = (quote
-        """ aasd"""
-        function fooo(x) x+2 end
-        end).args[2]
+a = ClobberingReload.parse_file("docstring.jl")[1]
 @test ClobberingReload.strip_docstring(a).head == :function
 
 ################################################################################
