@@ -13,6 +13,8 @@ immutable EvalableCode
     file::Union{String, Void}
 end
 EvalableCode(code::Expr, mod::Module, file) = EvalableCode([code], mod, file)
+Base.getindex(ev::EvalableCode, ind::UnitRange) =
+    EvalableCode(ev.code[ind], ev.mod, ev.file)
 apply_code!(ec::EvalableCode) = run_code_in(ec.code, ec.mod, ec.file)
 Base.length(ec::EvalableCode) = length(ec.code)
 
@@ -22,6 +24,8 @@ end
 Base.merge(cu1::CodeUpdate, cus::CodeUpdate...) =
     # We could conceivably merge the EvalableCode objects that share the same (mod, file)
     CodeUpdate(mapreduce(cu->cu.ecs, vcat, cu1.ecs, cus))
+Base.getindex(cu::CodeUpdate, ind::UnitRange) = CodeUpdate(cu.ecs[ind])
+Base.getindex(cu::CodeUpdate, ind::Int) = cu.ecs[ind]
 apply_code!(cu::CodeUpdate) = map(apply_code!, cu.ecs)
 
 immutable RevertibleCodeUpdate
