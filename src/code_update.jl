@@ -1,6 +1,12 @@
 export apply_code!, revert_code!, update_code_revertible, RevertibleCodeUpdate,
     CodeUpdate, EvalableCode, source
 
+function counter(seq)  # could use DataStructures.counter, but it's a big dependency
+    di = Dict()
+    for x in seq; di[x] = get(di, x, 0) + 1 end
+    di
+end
+
 immutable EvalableCode
     code::Vector{Expr}
     mod::Module
@@ -75,7 +81,8 @@ is_function_definition(::Any) = false
 
 """ `get_function(mod::Module, fundef::Expr)::Function` returns the `Function` which this
 `fundef` is defining. This code works only when the Function already exists. """
-get_function(mod::Module, fundef::Expr)::Function = eval(mod, splitdef(fundef)[:name])
+get_function(mod::Module, fundef::Expr)::Union{Function, Type} =
+    eval(mod, splitdef(fundef)[:name])
 
 is_call_definition(fundef) = @capture(splitdef(fundef)[:name], (a_::b_) | (::b_))
 
@@ -112,7 +119,7 @@ function update_code_revertible(fn::Function, mod::Module, file::String)
 end
 
 function update_code_revertible(new_code_fn::Function, mod::Module,
-                                file::String, fn_to_change::Function)
+                                file::String, fn_to_change::Union{Function, Type})
     update_code_revertible(mod, file) do expr
         if (is_function_definition(expr) &&
             !is_call_definition(expr) &&
@@ -122,17 +129,11 @@ function update_code_revertible(new_code_fn::Function, mod::Module,
     end
 end
 
-function counter(seq)  # could use DataStructures.counter, but it's a big dependency
-    di = Dict()
-    for x in seq; di[x] = get(di, x, 0) + 1 end
-    di
-end
-
 method_file_counts(fn_to_change) = counter((m.module, functionloc(m)[1])
                                            for m in methods(fn_to_change).ms)
 
 immutable UpdateInteractiveFailure
-    fn::Function
+    fn::Union{Function, Type}
 end
 Base.show(io::IO, upd::UpdateInteractiveFailure) =
     write(io, "Cannot find source of methods defined interactively ($(upd.fn)).")
@@ -140,13 +141,14 @@ Base.show(io::IO, upd::UpdateInteractiveFailure) =
 immutable MissingMethodFailure
     count::Int
     correct_count::Int
-    fn::Function
+    fn::Union{Function, Type}
     file::String
 end
 Base.show(io::IO, fail::MissingMethodFailure) =
     write(io, "Only $(fail.count)/$(fail.correct_count) methods of $(fail.fn) in $(fail.file) were found.")
 
-function update_code_revertible(new_code_fn::Function, fn_to_change::Function;
+function update_code_revertible(new_code_fn::Function,
+                                fn_to_change::Union{Function, Type};
                                 when_missing=warn)
     if when_missing in (false, nothing); when_missing = _->nothing end
     function update(mod, file, correct_count)
