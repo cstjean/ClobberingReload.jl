@@ -76,7 +76,10 @@ update_code_many(fn::Function, mod::Module, file::String) =
 ################################################################################
 # These should go into MacroTools/ExprTools
 
-is_function_definition(expr::Expr) = longdef1(expr).head == :function
+function is_function_definition(expr::Expr)
+    l = longdef1(expr)
+    l.head == :function && length(l.args) > 1 # `function foo end` is not a definition
+end
 is_function_definition(::Any) = false
 
 """ `get_function(mod::Module, fundef::Expr)::Function` returns the `Function` which this
@@ -129,8 +132,13 @@ function update_code_revertible(new_code_fn::Function, mod::Module,
     end
 end
 
-method_file_counts(fn_to_change) = counter((m.module, functionloc(m)[1])
-                                           for m in methods(fn_to_change).ms)
+method_file_counts(fn_to_change) =
+    counter((mod, file)
+            # The Set is so that we count methods that have the same file and line number.
+            # (i.e. optional files, although it might catch macroexpansions too; not
+            # sure if that's good or not)
+            for (mod, file, line) in Set((m.module, functionloc(m)...)
+                                         for m in methods(fn_to_change).ms))
 
 immutable UpdateInteractiveFailure
     fn::Union{Function, Type}
