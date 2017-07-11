@@ -71,4 +71,5 @@ end
 
 ################################################################################
 
-@test length(source(creload)) == 3
+@test length(source(creload)) == 2
+source(which) # check that it works with Base

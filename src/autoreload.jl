@@ -79,7 +79,8 @@ function register_hook!() # for IJulia
     end
 end
 
-function module_was_loaded!(mod_name)
+function module_was_loaded!(mod)
+    mod_name = module_string(mod)
     module2time[mod_name] = time()
     register_module_files!(mod_name)
     mod_name
