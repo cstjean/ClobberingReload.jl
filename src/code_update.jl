@@ -126,10 +126,16 @@ function revertible_update_helper(fn)
     end
 end
 
-""" `update_code_revertible(new_code_fn::Function, mod::Module)` applies
-the source code transformation function `new_code_fn` to each expression in the source
-code of `mod`, and returns a `RevertibleCodeUpdate` which can put into effect/revert
-that new code.
+"""
+    update_code_revertible(new_code_fn::Function, obj::Union{Module, Function, String})
+
+applies the source code transformation function `new_code_fn` to each expression in the
+source code of `obj`, and returns a `RevertibleCodeUpdate` which can put into
+effect/revert that new code. `obj` can be a module, a function (will transform each
+method), or a Main-included ".jl" filename.
+
+`update_code_revertible` itself is side-effect free (it neither modifies the source file,
+nor the state of `Julia`). See the README for usage info.
 
 IMPORTANT: if some expression `x` should not be modified, return `nothing` instead of `x`.
 This will significantly improve performance. """
@@ -154,6 +160,9 @@ function update_code_revertible(new_code_fn::Function, mod::Module,
     end
 end
 
+update_code_revertible(new_code_fn::Function, file::String) =
+    update_code_revertible(new_code_fn, Main, file)
+
 method_file_counts(fn_to_change) =
     counter((mod, file)
             # The Set is so that we count methods that have the same file and line number.
@@ -177,10 +186,6 @@ end
 Base.show(io::IO, fail::MissingMethodFailure) =
     write(io, "Only $(fail.count)/$(fail.correct_count) methods of $(fail.fn) in $(fail.file) were found.")
 
-""" `update_code_revertible(new_code_fn::Function, fn_to_change::Function)` applies
-the source code transformation function `new_code_fn` to the source of each of the
-mehods of `fn_to_change`, and returns a `RevertibleCodeUpdate` which can put into
-effect/revert that new code. """
 function update_code_revertible(new_code_fn::Function,
                                 fn_to_change::Union{Function, Type};
                                 when_missing=warn)

@@ -42,6 +42,8 @@ a = ClobberingReload.parse_file("docstring.jl")[1]
 ################################################################################
 # RevertibleCodeUpdate
 
+include("incl.jl")
+
 counter = fill(0)
 function add_counter(fdef)
     di = ClobberingReload.splitdef(fdef)
@@ -52,6 +54,9 @@ upd_high = update_code_revertible(AA.high) do code
     add_counter(code)
 end
 upd_module = update_code_revertible(AA) do code
+    if ClobberingReload.is_function_definition(code) add_counter(code) end
+end
+upd_include = update_code_revertible("incl.jl") do code
     if ClobberingReload.is_function_definition(code) add_counter(code) end
 end
 @test AA.high(1) == 10
@@ -68,7 +73,12 @@ upd_module() do
     @test AA.high(1.0) == 2
 end
 @test counter[] == 5 # three calls, since `bar` also becomes counting
-
+upd_include() do
+    @test apple() == :orange
+end
+apple()
+@test counter[] == 6
+    
 ################################################################################
 
 @test length(source(creload)) == 2
