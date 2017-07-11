@@ -7,6 +7,8 @@ function counter(seq)  # could use DataStructures.counter, but it's a big depend
     di
 end
 
+""" `EvalableCode(code::Vector, mod::Module, fille::Union{String, Void})` contains
+code to be evaluated in the context of that `file`, in that module. """
 immutable EvalableCode
     code::Vector{Expr}
     mod::Module
@@ -15,9 +17,12 @@ end
 EvalableCode(code::Expr, mod::Module, file) = EvalableCode([code], mod, file)
 Base.getindex(ev::EvalableCode, ind::UnitRange) =
     EvalableCode(ev.code[ind], ev.mod, ev.file)
-apply_code!(ec::EvalableCode) = run_code_in(ec.code, ec.mod, ec.file)
+Base.getindex(ev::EvalableCode, ind::Int) = ev.code[ind]
 Base.length(ec::EvalableCode) = length(ec.code)
+apply_code!(ec::EvalableCode) = run_code_in(ec.code, ec.mod, ec.file)
 
+""" `CodeUpdate(::Vector{EvalableCode})` is merely a collection of `EvalableCode`.
+Support `apply_code!(::CodeUpdate)`, and can be `merge`d together. """
 immutable CodeUpdate
     ecs::Vector{EvalableCode}
 end
@@ -26,8 +31,13 @@ Base.merge(cu1::CodeUpdate, cus::CodeUpdate...) =
     CodeUpdate(mapreduce(cu->cu.ecs, vcat, cu1.ecs, cus))
 Base.getindex(cu::CodeUpdate, ind::UnitRange) = CodeUpdate(cu.ecs[ind])
 Base.getindex(cu::CodeUpdate, ind::Int) = cu.ecs[ind]
+Base.length(cu::CodeUpdate) = length(cu.ecs)
 apply_code!(cu::CodeUpdate) = map(apply_code!, cu.ecs)
 
+""" `RevertibleCodeUpdate(apply::CodeUpdate, revert::CodeUpdate)` contains code
+to modify a module, and revert it back to its former state. Use `apply_code!` and
+`revert_code!`, or `(::RevertibleCodeUpdate)() do ... end` to temporarily apply the code.
+"""
 immutable RevertibleCodeUpdate
     apply::CodeUpdate
     revert::CodeUpdate
@@ -66,6 +76,7 @@ in every file of the module, expects a tuple of Expr to be returned, and returns
 corresponding tuple of `CodeUpdate`. """
 update_code_many(fn::Function, mod::Module) =
     # TODO: check that the every tuple of the zip transposes have the same length.
+    #   OR: get rid of the silly n-tuple generality, and only support 2-tuples
     # Note: Tuple(generator) syntax is 0.6-only
     tuple((merge(cus...)
            for cus in zip((update_code_many(fn, mod, file)
@@ -115,6 +126,13 @@ function revertible_update_helper(fn)
     end
 end
 
+""" `update_code_revertible(new_code_fn::Function, mod::Module)` applies
+the source code transformation function `new_code_fn` to each expression in the source
+code of `mod`, and returns a `RevertibleCodeUpdate` which can put into effect/revert
+that new code.
+
+IMPORTANT: if some expression `x` should not be modified, return `nothing` instead of `x`.
+This will significantly improve performance. """
 function update_code_revertible(fn::Function, mod::Module)
     if mod == Base; error("Cannot update all of Base (only specific functions/files)") end
     apply, revert = update_code_many(revertible_update_helper(fn), mod)
@@ -159,6 +177,10 @@ end
 Base.show(io::IO, fail::MissingMethodFailure) =
     write(io, "Only $(fail.count)/$(fail.correct_count) methods of $(fail.fn) in $(fail.file) were found.")
 
+""" `update_code_revertible(new_code_fn::Function, fn_to_change::Function)` applies
+the source code transformation function `new_code_fn` to the source of each of the
+mehods of `fn_to_change`, and returns a `RevertibleCodeUpdate` which can put into
+effect/revert that new code. """
 function update_code_revertible(new_code_fn::Function,
                                 fn_to_change::Union{Function, Type};
                                 when_missing=warn)
@@ -179,6 +201,11 @@ function update_code_revertible(new_code_fn::Function,
            for ((mod, file), correct_count) in method_file_counts(fn_to_change))...)
 end
 
+""" `source(fn::Function, when_missing=warn)::Vector` returns a vector of the parsed
+code corresponding to each method of `fn`. It can fail for any number of reasons,
+and `when_missing` is a function that will be passed an exception when it cannot find
+the code.
+"""
 function source(obj::Union{Module, Function}; kwargs...)
     code = []
     # It's (negligibly) wasteful and ugly to use `update_code_revertible` when all we
