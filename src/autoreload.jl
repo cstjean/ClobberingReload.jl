@@ -19,8 +19,9 @@ gather_includes(code::Vector) =
 module_string(mod::String) = mod
 module_string(mod::Module) = string(module_name(mod))
 
+module_definition_file_(mod) = Base.find_in_node_path(module_string(mod), nothing, 1)
 function module_definition_file(mod)
-    path = Base.find_in_node_path(module_string(mod), nothing, 1)
+    path = module_definition_file_(mod)
     if path === nothing
         error("Cannot find path of module $mod. To be usable by `ClobberingReload`, the module has to be defined in a file called $mod.jl, and that file's directory must be pushed onto LOAD_PATH. See the Julia docs on `using`.")
     end
