@@ -103,18 +103,13 @@ function creload(mod)
     mod_name = creload(identity, mod)
     module_was_loaded!(mod_name)  # for areload()
 end    
-creload(code_function::Function, mod_name::Module) =
-    creload(code_function, string(mod_name))
 
 """ `creload(f::Function, mod_name)` applies `f` to the code before reloading it.
 This allows external instrumentation of a module's code (for instance, to add profiling
 code). `f` accepts a Vector of Expr and should return a Vector of Expr. """
-function creload(code_function::Function, mod_name::String)
+function creload(code_function::Function, mod_name)
     info("Reloading $mod_name")
-    mod_path = Base.find_in_node_path(mod_name, nothing, 1)
-    if mod_path === nothing
-        error("Cannot find path of module $mod_name. To be reloadable, the module has to be defined in a file called $mod_name.jl, and that file's directory must be pushed onto the LOAD_PATH")
-    end
+    mod_path = module_definition_file(mod_name)
     withpath(mod_path::String) do
         # real_mod_name is in case that the module name differs from the file name,
         # but... I'm not sure that makes any difference. Maybe we should just assert
