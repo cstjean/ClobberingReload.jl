@@ -190,18 +190,20 @@ function update_code_revertible(new_code_fn::Function,
                                 fn_to_change::Union{Function, Type};
                                 when_missing=warn)
     if when_missing in (false, nothing); when_missing = _->nothing end
-    function update(mod, file, correct_count)
+    function update(mod, file::String, correct_count)
         if mod == Main
             when_missing(UpdateInteractiveFailure(fn_to_change))
             return EmptyRevertibleCodeUpdate()
         end
-        rcu = update_code_revertible(new_code_fn, mod, string(file), fn_to_change)
+        rcu = update_code_revertible(new_code_fn, mod, file, fn_to_change)
         count = length(only(rcu.revert.ecs)) # how many methods were updated
         if count != correct_count
             when_missing(MissingMethodFailure(count, correct_count, fn_to_change, file))
         end
         rcu
     end
+    update(mod, file::Void, correct_count) =
+        EmptyRevertibleCodeUpdate()     # No file info, no update!
     merge((update(mod, file, correct_count)
            for ((mod, file), correct_count) in method_file_counts(fn_to_change))...)
 end
