@@ -15,6 +15,20 @@ else
                 "Not a function definition: $fdef")
         return fcall, body, nothing
     end
+
+    """
+        combinedef(dict::Dict)
+
+    `combinedef` is the inverse of `splitdef`. It takes a splitdef-like dict
+    and returns a function definition. """
+    function combinedef(dict::Dict)
+        rtype = get(dict, :rtype, :Any)
+        params = get(dict, :params, [])
+        :(function $(dict[:name]){$(params...)}($(dict[:args]...);
+                                                $(dict[:kwargs]...))::$rtype
+              $(dict[:body])
+          end)
+    end
 end
 
 function longdef1(ex)
@@ -64,22 +78,6 @@ function splitdef(fdef)
     if whereparams !== nothing; di[:whereparams] = whereparams end
     if params !== nothing; di[:params] = params end
     di
-end
-
-"""
-    combinedef(dict::Dict)
-
-`combinedef` is the inverse of `splitdef`. It takes a splitdef-like dict
-and returns a function definition. """
-function combinedef(dict::Dict)
-    rtype = get(dict, :rtype, :Any)
-    # We have to combine params and whereparams because f{}() where {} = 0 is
-    # a syntax error unless as a constructor.
-    all_params = [get(dict, :params, [])..., get(dict, :whereparams, [])...]
-    :(function $(dict[:name]){$(all_params...)}($(dict[:args]...);
-                                                $(dict[:kwargs]...))::$rtype
-          $(dict[:body])
-      end)
 end
 
 

@@ -33,3 +33,29 @@ function splitwhere(fdef)
     fcall2, whereparams = gather_wheres(fcall)
     return fcall2, body, whereparams
 end
+
+"""
+     combinedef(dict::Dict)
+
+`combinedef` is the inverse of `splitdef`. It takes a splitdef-like dict
+and returns a function definition. """
+function combinedef(dict::Dict)
+    rtype = get(dict, :rtype, :Any)
+    params = get(dict, :params, [])
+    # LightGraph.jl has outer-constructors with both normal-params and where-params
+    # TODO: write test
+    wparams = get(dict, :whereparams, [])
+    name = dict[:name]
+    name_p = isempty(params) ? name : :($name{$(params...)})
+    if isempty(wparams)
+        :(function $name_p($(dict[:args]...);
+                           $(dict[:kwargs]...))::$rtype
+          $(dict[:body])
+          end)
+    else
+        :(function $name_p($(dict[:args]...);
+                           $(dict[:kwargs]...))::$rtype where {$(wparams...)}
+          $(dict[:body])
+          end)
+    end
+end
