@@ -102,7 +102,13 @@ is_function_definition(::Any) = false
 get_function(mod::Module, fundef::Expr)::Union{Function, Type} =
     eval(mod, splitdef(fundef)[:name])
 
-is_call_definition(fundef) = @capture(splitdef(fundef)[:name], (a_::b_) | (::b_))
+is_call_definition(fundef_di::Dict) = @capture(fundef_di[:name], (a_::b_) | (::b_))
+is_call_definition(fundef) = is_call_definition(splitdef(fundef))
+""" `is_fancy_constructor_definition(fundef)` is true for constructors that have both
+parameters and where-parameters (eg. `Vector{T}(x) where T = ...`) """
+is_fancy_constructor_definition(fundef_di::Dict) =
+    !isempty(get(fundef_di, :params, ())) && !isempty(get(fundef_di, :whereparams, ()))
+is_fancy_constructor_definition(fundef)=is_fancy_constructor_definition(splitdef(fundef))
 
 strip_docstring(x) = x
 function strip_docstring(x::Expr)

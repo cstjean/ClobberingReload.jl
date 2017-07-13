@@ -82,4 +82,5 @@ apple()
 ################################################################################
 
 @test length(source(creload)) == 2
-source(which) # check that it works with Base
+source(Base.which) # check that it works with Base
+source(Base.vcat)  # nested where (as of July '17)
