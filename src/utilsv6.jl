@@ -28,8 +28,8 @@ function longdef1_where(ex)
 end
 function splitwhere(fdef)
     @assert(@capture(longdef1(fdef),
-                     function ((fcall_ where {whereparams__}) | fcall_)
-                     body_ end),
+                     function (fcall_ | fcall_) body_ end),
             "Not a function definition: $fdef")
-    return fcall, body, whereparams
+    fcall2, whereparams = gather_wheres(fcall)
+    return fcall2, body, whereparams
 end
