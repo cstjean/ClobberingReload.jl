@@ -148,7 +148,7 @@ function code_of(included_file::String)::CodeUpdate
 end
 
 method_file_counts(fn_to_change) =
-    counter((mod, file)
+    counter((mod, realpath(abspath(file)))
             # The Set is so that we count methods that have the same file and line number.
             # (i.e. optional files, although it might catch macroexpansions too; not
             # sure if that's good or not)
@@ -176,7 +176,7 @@ function parse_mod!(mod::Module)
         mainfile = joinpath(dirname(dirname(JULIA_HOME)), "base", "sysimg.jl")
         parse_source(mainfile, Main, dirname(mainfile))
     else
-        parse_pkg_files(Symbol(mod)) # it's a side-effect of this function...
+        Revise.parse_pkg_files(Symbol(mod)) # it's a side-effect of this function...
     end
     nothing
 end
@@ -184,8 +184,7 @@ end
 
 function code_of(fn::Function; when_missing=warn)::CodeUpdate
     if when_missing in (false, nothing); when_missing = _->nothing end
-    function process(mod, file0::String, correct_count)
-        file = abspath(file0)
+    function process(mod, file, correct_count)
         if mod == Main
             when_missing(UpdateInteractiveFailure(fn))
             return CodeUpdate()
@@ -214,10 +213,8 @@ function code_of(fn::Function; when_missing=warn)::CodeUpdate
         rcu
     end
     process(mod, file::Void, correct_count) =  CodeUpdate()  # no file info, no update!
-    # return [process(mod, file, correct_count)
-    #         for ((mod, file), correct_count) in method_file_counts(fn)]
-    merge((process(mod, file, correct_count)
-           for ((mod, file), correct_count) in method_file_counts(fn))...)
+    return merge((process(mod, file, correct_count)
+                  for ((mod, file), correct_count) in method_file_counts(fn))...)
 end
 
 
@@ -239,21 +236,6 @@ function update_code_revertible(fn::Function, mod::Module)
     if mod == Base; error("Cannot update all of Base (only specific functions/files)") end
     return RevertibleCodeUpdate(fn, code_of(mod))
 end
-# function update_code_revertible(fn::Function, mod::Module, file::String)
-#     apply, revert = update_code_many(revertible_update_helper(fn), mod, file)
-#     return RevertibleCodeUpdate(apply, revert)
-# end
-
-# function update_code_revertible(new_code_fn::Function, mod::Module,
-#                                 file::String, fn_to_change::Union{Function, Type})
-#     update_code_revertible(mod, file) do expr
-#         if (is_function_definition(expr) &&
-#             !is_call_definition(expr) &&
-#             get_function(mod, expr) == fn_to_change)
-#             new_code_fn(expr)
-#         else nothing end
-#     end
-# end
 
 update_code_revertible(new_code_fn::Function, file::String) =
     RevertibleCodeUpdate(new_code_fn, code_of(file))
