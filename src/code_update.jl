@@ -33,10 +33,19 @@ Base.length(cu::CodeUpdate) = length(cu.md)
 apply_code!(cu::CodeUpdate) = scrub_redefinition_warnings() do
     Revise.eval_revised(cu.md)
 end
-MakeRelocatableExpr(ex) = # because the Revise constructor is unsafe
-    RelocatableExpr(ex.head, ex.args, ex.typ)
+function MakeRelocatableExpr(ex::Expr)
+    # because the Revise constructor (via the convert method) is unsafe (!)
+    rex = RelocatableExpr(ex.head, ex.args)
+    rex.typ = ex.typ
+    rex
+end
+        
+to_expr(rex::RelocatableExpr) =
+    # Necessary because sometimes rex.typ is #undef, and Revise.convert(::RelocatableExpr)
+    # uses rex.typ. No idea why/when that's happening. Don't think it's on my end.
+    Expr(rex.head, rex.args...)
 
-empty_rex = RelocatableExpr(:(identity(nothing))) # a dummy
+empty_rex = MakeRelocatableExpr(:(identity(nothing))) # a dummy
 function apply(fn::Function, rex::RelocatableExpr)
     r = fn(convert(Expr, rex))
     r === nothing ? empty_rex : MakeRelocatableExpr(r)
@@ -240,14 +249,5 @@ code corresponding to each method of `fn`. It can fail for any number of reasons
 and `when_missing` is a function that will be passed an exception when it cannot find
 the code.
 """
-function source(obj::Union{Module, Function}; kwargs...)
-    code = []
-    # It's (negligibly) wasteful and ugly to use `update_code_revertible` when all we
-    # want is to get the Module's or the Function's definitions, but I doubt that a
-    # refactor would be any cleaner. - June'17
-    update_code_revertible(obj; kwargs...) do expr
-        push!(code, expr)
-        :(one(1)) # needs an expr to get correct `length` in update_code_revertible
-    end
-    code
-end
+source(obj::Union{Module, Function}; kwargs...) =
+    [to_expr(rex) for (mod2, rex_set) in code_of(obj).md for rex in rex_set]
