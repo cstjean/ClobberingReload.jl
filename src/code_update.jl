@@ -1,3 +1,7 @@
+ENV["JULIA_REVISE"] = "manual"
+import Revise
+using Revise: ModDict, parse_source, RelocatableExpr
+
 export apply_code!, revert_code!, update_code_revertible, RevertibleCodeUpdate,
     CodeUpdate, EvalableCode, source
 
@@ -7,32 +11,44 @@ function counter(seq)  # could use DataStructures.counter, but it's a big depend
     di
 end
 
-""" `EvalableCode(code::Vector, mod::Module, fille::Union{String, Void})` contains
-code to be evaluated in the context of that `file`, in that module. """
-immutable EvalableCode
-    code::Vector{Expr}
-    mod::Module
-    file::Union{String, Void}
+immutable CodeUpdate
+    md::ModDict
 end
-EvalableCode(code::Expr, mod::Module, file) = EvalableCode([code], mod, file)
-Base.getindex(ev::EvalableCode, ind::UnitRange) =
-    EvalableCode(ev.code[ind], ev.mod, ev.file)
-Base.getindex(ev::EvalableCode, ind::Int) = ev.code[ind]
-Base.length(ec::EvalableCode) = length(ec.code)
-apply_code!(ec::EvalableCode) = run_code_in(ec.code, ec.mod, ec.file)
+CodeUpdate() = CodeUpdate(ModDict())
 
 """ `CodeUpdate(::Vector{EvalableCode})` is merely a collection of `EvalableCode`.
 Support `apply_code!(::CodeUpdate)`, and can be `merge`d together. """
-immutable CodeUpdate
-    ecs::Vector{EvalableCode}
+function Base.merge(cu1::CodeUpdate, cus::CodeUpdate...)
+    md = ModDict()
+    for cu in [cu1, cus...]
+        for (mod::Module, set) in cu.md
+            md[mod] = union(get(md, mod, Set{RelocatableExpr}()), set)
+        end
+    end
+    return CodeUpdate(md)
 end
-Base.merge(cu1::CodeUpdate, cus::CodeUpdate...) =
-    # We could conceivably merge the EvalableCode objects that share the same (mod, file)
-    CodeUpdate(mapreduce(cu->cu.ecs, vcat, cu1.ecs, cus))
-Base.getindex(cu::CodeUpdate, ind::UnitRange) = CodeUpdate(cu.ecs[ind])
-Base.getindex(cu::CodeUpdate, ind::Int) = cu.ecs[ind]
-Base.length(cu::CodeUpdate) = length(cu.ecs)
-apply_code!(cu::CodeUpdate) = map(apply_code!, cu.ecs)
+# Base.getindex(cu::CodeUpdate, ind::UnitRange) = CodeUpdate(cu.ecs[ind])
+Base.getindex(cu::CodeUpdate, ind::Module) = cu.md[ind]
+Base.length(cu::CodeUpdate) = length(cu.md)
+apply_code!(cu::CodeUpdate) = scrub_redefinition_warnings() do
+    Revise.eval_revised(cu.md)
+end
+MakeRelocatableExpr(ex) = # because the Revise constructor is unsafe
+    RelocatableExpr(ex.head, ex.args, ex.typ)
+
+empty_rex = RelocatableExpr(:(identity(nothing))) # a dummy
+function apply(fn::Function, rex::RelocatableExpr)
+    r = fn(convert(Expr, rex))
+    r === nothing ? empty_rex : MakeRelocatableExpr(r)
+end
+
+is_empty_rex(rex::RelocatableExpr) = rex === empty_rex
+Base.map(fn::Function, cu::CodeUpdate) =
+    ModDict(mod=>filter(rex->!is_empty_rex(rex),
+                        Set{RelocatableExpr}(apply(fn, rex) for rex in set_rex))
+            for (mod, set_rex) in cu.md)
+Base.filter(fn::Function, cu::CodeUpdate) =
+    map(expr->fn(expr) ? expr : nothing, cu) # a lazy & wasteful implementation
 
 """ `RevertibleCodeUpdate(apply::CodeUpdate, revert::CodeUpdate)` contains code
 to modify a module, and revert it back to its former state. Use `apply_code!` and
@@ -42,7 +58,7 @@ immutable RevertibleCodeUpdate
     apply::CodeUpdate
     revert::CodeUpdate
 end
-EmptyRevertibleCodeUpdate() = RevertibleCodeUpdate(CodeUpdate([]), CodeUpdate([]))
+EmptyRevertibleCodeUpdate() = RevertibleCodeUpdate(CodeUpdate(), CodeUpdate())
 Base.merge(rcu1::RevertibleCodeUpdate, rcus::RevertibleCodeUpdate...) =
     RevertibleCodeUpdate(merge((rcu.apply for rcu in (rcu1, rcus...))...),
                          merge((rcu.revert for rcu in (rcu1, rcus...))...))
@@ -63,30 +79,6 @@ end
 parse_file_mod(file, mod) = (file == module_definition_file_(mod) ?
                              parse_module_file(file)[2] : parse_file(file))
 
-""" `update_code(fn::Function, mod::Module)` applies `fn` to every expression
-in every file of the module, and returns a `CodeUpdate` with the result. """
-update_code(fn::Function, mod::Module) =
-    # Note: this was never used so far - July '17
-    CodeUpdate([EvalableCode(map(fn, parse_file_mod(file, mod)), mod, file)
-                for file in gather_all_module_files(string(mod))])
-
-
-""" `update_code_many(fn::Function, mod::Module)` applies `fn` to every expression
-in every file of the module, expects a tuple of Expr to be returned, and returns a
-corresponding tuple of `CodeUpdate`. """
-update_code_many(fn::Function, mod::Module) =
-    # TODO: check that the every tuple of the zip transposes have the same length.
-    #   OR: get rid of the silly n-tuple generality, and only support 2-tuples
-    # Note: Tuple(generator) syntax is 0.6-only
-    tuple((merge(cus...)
-           for cus in zip((update_code_many(fn, mod, file)
-                           for file in gather_all_module_files(string(mod)))...))...)
-
-update_code_many(fn::Function, mod::Module, file::String) =
-    tuple((CodeUpdate([EvalableCode(Expr[c for c in newcode if c !== nothing],
-                                    mod, file)])
-           for newcode in zip([fn(strip_docstring(expr))
-                               for expr in parse_file_mod(file, mod)]...))...)
 
 ################################################################################
 # These should go into MacroTools/ExprTools
@@ -132,42 +124,16 @@ function revertible_update_helper(fn)
     end
 end
 
-"""
-    update_code_revertible(new_code_fn::Function, obj::Union{Module, Function, String})
-
-applies the source code transformation function `new_code_fn` to each expression in the
-source code of `obj`, and returns a `RevertibleCodeUpdate` which can put into
-effect/revert that new code. `obj` can be a module, a function (will transform each
-method), or a Main-included ".jl" filename.
-
-`update_code_revertible` itself is side-effect free (it neither modifies the source file,
-nor the state of `Julia`). See the README for usage info.
-
-IMPORTANT: if some expression `x` should not be modified, return `nothing` instead of `x`.
-This will significantly improve performance. """
-function update_code_revertible(fn::Function, mod::Module)
-    if mod == Base; error("Cannot update all of Base (only specific functions/files)") end
-    apply, revert = update_code_many(revertible_update_helper(fn), mod)
-    return RevertibleCodeUpdate(apply, revert)
+code_of(mod::Module) = 
+    merge((code_of(mod, file) for file in Revise.parse_pkg_files(Symbol(mod)))...)
+           
+code_of(mod::Module, file::String) =
+    (haskey(Revise.file2modules, file) ? CodeUpdate(Revise.file2modules[file].md) :
+     CodeUpdate())
+function code_of(included_file::String)
+    parse_source(Main, included_file, pwd())
+    code_of(Main, included_file)
 end
-function update_code_revertible(fn::Function, mod::Module, file::String)
-    apply, revert = update_code_many(revertible_update_helper(fn), mod, file)
-    return RevertibleCodeUpdate(apply, revert)
-end
-
-function update_code_revertible(new_code_fn::Function, mod::Module,
-                                file::String, fn_to_change::Union{Function, Type})
-    update_code_revertible(mod, file) do expr
-        if (is_function_definition(expr) &&
-            !is_call_definition(expr) &&
-            get_function(mod, expr) == fn_to_change)
-            new_code_fn(expr)
-        else nothing end
-    end
-end
-
-update_code_revertible(new_code_fn::Function, file::String) =
-    update_code_revertible(new_code_fn, Main, file)
 
 method_file_counts(fn_to_change) =
     counter((mod, file)
@@ -192,27 +158,82 @@ end
 Base.show(io::IO, fail::MissingMethodFailure) =
     write(io, "Only $(fail.count)/$(fail.correct_count) methods of $(fail.fn) in $(fail.file) were found.")
 
-function update_code_revertible(new_code_fn::Function,
-                                fn_to_change::Union{Function, Type};
-                                when_missing=warn)
+function code_of(fn::Function; when_missing=warn)
     if when_missing in (false, nothing); when_missing = _->nothing end
-    function update(mod, file::String, correct_count)
+    function process(mod, file::String, correct_count)
         if mod == Main
-            when_missing(UpdateInteractiveFailure(fn_to_change))
-            return EmptyRevertibleCodeUpdate()
+            when_missing(UpdateInteractiveFailure(fn))
+            return CodeUpdate()
         end
-        rcu = update_code_revertible(new_code_fn, mod, file, fn_to_change)
-        count = length(only(rcu.revert.ecs)) # how many methods were updated
-        if count != correct_count
-            when_missing(MissingMethodFailure(count, correct_count, fn_to_change, file))
+        if !haskey(Revise.file2modules, file)
+            parse_source(mod) # FIXME: better logic?
         end
-        rcu
+        function to_keep(expr0)
+            expr = strip_docstring(expr0)
+            if is_function_definition(expr) && !is_call_definition(expr)
+                # @show get_function(mod, expr)
+                # @show get_function(mod, expr) == fn
+            end
+            return is_function_definition(expr) &&
+                !is_call_definition(expr) &&
+                # FIXME: this `mod` isn't really right. We should go over
+                # the `rex` objects in code_of directly
+                get_function(mod, expr) == fn
+        end
+        rcu = filter(to_keep, code_of(mod, file)::CodeUpdate)
+        # count = length(only(rcu.revert.ecs)) # how many methods were updated
+        # if count != correct_count
+        #     when_missing(MissingMethodFailure(count, correct_count, fn, file))
+        # end
+        CodeUpdate(rcu)
     end
-    update(mod, file::Void, correct_count) =
-        EmptyRevertibleCodeUpdate()     # No file info, no update!
-    merge((update(mod, file, correct_count)
-           for ((mod, file), correct_count) in method_file_counts(fn_to_change))...)
+    process(mod, file::Void, correct_count) =  CodeUpdate()  # no file info, no update!
+    # return [process(mod, file, correct_count)
+    #         for ((mod, file), correct_count) in method_file_counts(fn)]
+    merge((process(mod, file, correct_count)
+           for ((mod, file), correct_count) in method_file_counts(fn))...)
 end
+
+
+
+"""
+    update_code_revertible(new_code_fn::Function, obj::Union{Module, Function, String})
+
+applies the source code transformation function `new_code_fn` to each expression in the
+source code of `obj`, and returns a `RevertibleCodeUpdate` which can put into
+effect/revert that new code. `obj` can be a module, a function (will transform each
+method), or a Main-included ".jl" filename.
+
+`update_code_revertible` itself is side-effect free (it neither modifies the source file,
+nor the state of `Julia`). See the README for usage info.
+
+IMPORTANT: if some expression `x` should not be modified, return `nothing` instead of `x`.
+This will significantly improve performance. """
+function update_code_revertible(fn::Function, mod::Module)
+    if mod == Base; error("Cannot update all of Base (only specific functions/files)") end
+    revert = code_update(mod)
+    apply, revert = update_code_many(revertible_update_helper(fn), mod)
+    return RevertibleCodeUpdate(apply, revert)
+end
+function update_code_revertible(fn::Function, mod::Module, file::String)
+    apply, revert = update_code_many(revertible_update_helper(fn), mod, file)
+    return RevertibleCodeUpdate(apply, revert)
+end
+
+function update_code_revertible(new_code_fn::Function, mod::Module,
+                                file::String, fn_to_change::Union{Function, Type})
+    update_code_revertible(mod, file) do expr
+        if (is_function_definition(expr) &&
+            !is_call_definition(expr) &&
+            get_function(mod, expr) == fn_to_change)
+            new_code_fn(expr)
+        else nothing end
+    end
+end
+
+update_code_revertible(new_code_fn::Function, file::String) =
+    update_code_revertible(new_code_fn, Main, file)
+
 
 """ `source(fn::Function, when_missing=warn)::Vector` returns a vector of the parsed
 code corresponding to each method of `fn`. It can fail for any number of reasons,
