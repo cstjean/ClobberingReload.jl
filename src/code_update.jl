@@ -53,9 +53,10 @@ end
 
 is_empty_rex(rex::RelocatableExpr) = rex === empty_rex
 Base.map(fn::Function, cu::CodeUpdate) =
-    ModDict(mod=>filter(rex->!is_empty_rex(rex),
-                        Set{RelocatableExpr}(apply(fn, rex) for rex in set_rex))
-            for (mod, set_rex) in cu.md)
+    CodeUpdate(ModDict(mod=>filter(rex->!is_empty_rex(rex),
+                                   Set{RelocatableExpr}(apply(fn, rex)
+                                                        for rex in set_rex))
+                       for (mod, set_rex) in cu.md))
 Base.filter(fn::Function, cu::CodeUpdate) =
     map(expr->fn(expr) ? expr : nothing, cu) # a lazy & wasteful implementation
 
@@ -141,8 +142,8 @@ code_of(mod::Module) =
 code_of(mod::Module, file::String) =
     (haskey(Revise.file2modules, file) ? CodeUpdate(Revise.file2modules[file].md) :
      CodeUpdate())
-function code_of(included_file::String)
-    parse_source(Main, included_file, pwd())
+function code_of(included_file::String)::CodeUpdate
+    parse_source(included_file, Main, pwd())
     code_of(Main, included_file)
 end
 
@@ -169,15 +170,33 @@ end
 Base.show(io::IO, fail::MissingMethodFailure) =
     write(io, "Only $(fail.count)/$(fail.correct_count) methods of $(fail.fn) in $(fail.file) were found.")
 
-function code_of(fn::Function; when_missing=warn)
+""" `parse_mod!` fills up Revise.file2modules for that module, and returns `nothing` """
+function parse_mod!(mod::Module)
+    if mod == Base
+        mainfile = joinpath(dirname(dirname(JULIA_HOME)), "base", "sysimg.jl")
+        parse_source(mainfile, Main, dirname(mainfile))
+    else
+        parse_pkg_files(Symbol(mod)) # it's a side-effect of this function...
+    end
+    nothing
+end
+
+
+function code_of(fn::Function; when_missing=warn)::CodeUpdate
     if when_missing in (false, nothing); when_missing = _->nothing end
-    function process(mod, file::String, correct_count)
+    function process(mod, file0::String, correct_count)
+        file = abspath(file0)
         if mod == Main
             when_missing(UpdateInteractiveFailure(fn))
             return CodeUpdate()
         end
         if !haskey(Revise.file2modules, file)
-            parse_source(mod) # FIXME: better logic?
+            parse_mod!(mod) # FIXME: better logic? Currently could take a long time
+                            # should remember which mods have been parsed this way.
+            if !haskey(Revise.file2modules, file)
+                # Should fail somehow?
+                return CodeUpdate()
+            end
         end
         function to_keep(expr0)
             expr = strip_docstring(expr0)
@@ -192,7 +211,7 @@ function code_of(fn::Function; when_missing=warn)
         # if count != correct_count
         #     when_missing(MissingMethodFailure(count, correct_count, fn, file))
         # end
-        CodeUpdate(rcu)
+        rcu
     end
     process(mod, file::Void, correct_count) =  CodeUpdate()  # no file info, no update!
     # return [process(mod, file, correct_count)
@@ -218,28 +237,28 @@ IMPORTANT: if some expression `x` should not be modified, return `nothing` inste
 This will significantly improve performance. """
 function update_code_revertible(fn::Function, mod::Module)
     if mod == Base; error("Cannot update all of Base (only specific functions/files)") end
-    revert = code_update(mod)
-    apply, revert = update_code_many(revertible_update_helper(fn), mod)
-    return RevertibleCodeUpdate(apply, revert)
+    return RevertibleCodeUpdate(fn, code_of(mod))
 end
-function update_code_revertible(fn::Function, mod::Module, file::String)
-    apply, revert = update_code_many(revertible_update_helper(fn), mod, file)
-    return RevertibleCodeUpdate(apply, revert)
-end
+# function update_code_revertible(fn::Function, mod::Module, file::String)
+#     apply, revert = update_code_many(revertible_update_helper(fn), mod, file)
+#     return RevertibleCodeUpdate(apply, revert)
+# end
 
-function update_code_revertible(new_code_fn::Function, mod::Module,
-                                file::String, fn_to_change::Union{Function, Type})
-    update_code_revertible(mod, file) do expr
-        if (is_function_definition(expr) &&
-            !is_call_definition(expr) &&
-            get_function(mod, expr) == fn_to_change)
-            new_code_fn(expr)
-        else nothing end
-    end
-end
+# function update_code_revertible(new_code_fn::Function, mod::Module,
+#                                 file::String, fn_to_change::Union{Function, Type})
+#     update_code_revertible(mod, file) do expr
+#         if (is_function_definition(expr) &&
+#             !is_call_definition(expr) &&
+#             get_function(mod, expr) == fn_to_change)
+#             new_code_fn(expr)
+#         else nothing end
+#     end
+# end
 
 update_code_revertible(new_code_fn::Function, file::String) =
-    update_code_revertible(new_code_fn, Main, file)
+    RevertibleCodeUpdate(new_code_fn, code_of(file))
+update_code_revertible(new_code_fn::Function, fn::Function; when_missing=warn) =
+    RevertibleCodeUpdate(new_code_fn, code_of(fn; when_missing=when_missing))
 
 
 """ `source(fn::Function, when_missing=warn)::Vector` returns a vector of the parsed
