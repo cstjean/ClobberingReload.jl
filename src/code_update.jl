@@ -67,6 +67,8 @@ immutable RevertibleCodeUpdate
     apply::CodeUpdate
     revert::CodeUpdate
 end
+RevertibleCodeUpdate(fn::Function, revert::CodeUpdate) =
+    RevertibleCodeUpdate(map(fn, revert), revert)
 EmptyRevertibleCodeUpdate() = RevertibleCodeUpdate(CodeUpdate(), CodeUpdate())
 Base.merge(rcu1::RevertibleCodeUpdate, rcus::RevertibleCodeUpdate...) =
     RevertibleCodeUpdate(merge((rcu.apply for rcu in (rcu1, rcus...))...),
@@ -179,10 +181,6 @@ function code_of(fn::Function; when_missing=warn)
         end
         function to_keep(expr0)
             expr = strip_docstring(expr0)
-            if is_function_definition(expr) && !is_call_definition(expr)
-                # @show get_function(mod, expr)
-                # @show get_function(mod, expr) == fn
-            end
             return is_function_definition(expr) &&
                 !is_call_definition(expr) &&
                 # FIXME: this `mod` isn't really right. We should go over
