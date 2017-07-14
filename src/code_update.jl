@@ -172,6 +172,9 @@ Base.show(io::IO, fail::MissingMethodFailure) =
 
 """ `parse_mod!` fills up Revise.file2modules for that module, and returns `nothing` """
 function parse_mod!(mod::Module)
+    if module_parent(mod) !== Main
+        return parse_mod!(module_parent(mod))
+    end
     if mod == Base
         mainfile = joinpath(dirname(dirname(JULIA_HOME)), "base", "sysimg.jl")
         parse_source(mainfile, Main, dirname(mainfile))
@@ -248,5 +251,13 @@ code corresponding to each method of `fn`. It can fail for any number of reasons
 and `when_missing` is a function that will be passed an exception when it cannot find
 the code.
 """
-source(obj::Union{Module, Function}; kwargs...) =
-    [to_expr(rex) for (mod2, rex_set) in code_of(obj).md for rex in rex_set]
+function source(obj::Union{Module, Function}; kwargs...)
+    res = []
+    # Loop because flattening comprehensions are broken in 0.6
+    for (mod2, rex_set) in code_of(obj).md
+        for rex in rex_set
+            push!(res, to_expr(rex))
+        end
+    end
+    res
+end
