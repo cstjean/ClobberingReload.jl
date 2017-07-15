@@ -176,8 +176,7 @@ function parse_mod!(mod::Module)
         return parse_mod!(module_parent(mod))
     end
     if mod == Base
-        mainfile = joinpath(dirname(dirname(JULIA_HOME)), "base", "sysimg.jl")
-        parse_source(mainfile, Main, dirname(mainfile))
+        parse_source(Revise.sysimg_path, Main, dirname(Revise.sysimg_path))
     else
         Revise.parse_pkg_files(Symbol(mod)) # it's a side-effect of this function...
     end
