@@ -184,7 +184,7 @@ function parse_mod!(mod::Module)
 end
 
 
-function code_of(fn::Function; when_missing=warn)::CodeUpdate
+function code_of(fn::Union{Function, Type}; when_missing=warn)::CodeUpdate
     if when_missing in (false, nothing); when_missing = _->nothing end
     function process(mod, file, correct_count)
         if mod == Main
@@ -239,8 +239,9 @@ end
 
 update_code_revertible(new_code_fn::Function, file::String) =
     RevertibleCodeUpdate(new_code_fn, code_of(file))
-update_code_revertible(new_code_fn::Function, fn::Function; when_missing=warn) =
-    RevertibleCodeUpdate(new_code_fn, code_of(fn; when_missing=when_missing))
+update_code_revertible(new_code_fn::Function, fn_to_change::Union{Function, Type};
+                       when_missing=warn) =
+    RevertibleCodeUpdate(new_code_fn, code_of(fn_to_change; when_missing=when_missing))
 
 
 """ `source(fn::Function, when_missing=warn)::Vector` returns a vector of the parsed
