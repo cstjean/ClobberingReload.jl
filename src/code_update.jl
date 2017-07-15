@@ -46,19 +46,19 @@ to_expr(rex::RelocatableExpr) =
     Expr(rex.head, rex.args...)
 
 empty_rex = MakeRelocatableExpr(:(identity(nothing))) # a dummy
-function apply(fn::Function, rex::RelocatableExpr)
-    r = fn(convert(Expr, rex))
+function apply(fn::Function, rex::RelocatableExpr, mod::Module)
+    r = fn(convert(Expr, rex), mod)
     r === nothing ? empty_rex : MakeRelocatableExpr(r)
 end
 
 is_empty_rex(rex::RelocatableExpr) = rex === empty_rex
 Base.map(fn::Function, cu::CodeUpdate) =
     CodeUpdate(ModDict(mod=>filter(rex->!is_empty_rex(rex),
-                                   Set{RelocatableExpr}(apply(fn, rex)
+                                   Set{RelocatableExpr}(apply(fn, rex, mod)
                                                         for rex in set_rex))
                        for (mod, set_rex) in cu.md))
 Base.filter(fn::Function, cu::CodeUpdate) =
-    map(expr->fn(expr) ? expr : nothing, cu) # a lazy & wasteful implementation
+    map((expr, mod)->fn(expr, mod) ? expr : nothing, cu) #a lazy & wasteful implementation
 
 """ `RevertibleCodeUpdate(apply::CodeUpdate, revert::CodeUpdate)` contains code
 to modify a module, and revert it back to its former state. Use `apply_code!` and
@@ -69,7 +69,7 @@ immutable RevertibleCodeUpdate
     revert::CodeUpdate
 end
 RevertibleCodeUpdate(fn::Function, revert::CodeUpdate) =
-    RevertibleCodeUpdate(map(fn, revert), revert)
+    RevertibleCodeUpdate(map((expr, mod)->fn(expr), revert), revert)
 EmptyRevertibleCodeUpdate() = RevertibleCodeUpdate(CodeUpdate(), CodeUpdate())
 Base.merge(rcu1::RevertibleCodeUpdate, rcus::RevertibleCodeUpdate...) =
     RevertibleCodeUpdate(merge((rcu.apply for rcu in (rcu1, rcus...))...),
@@ -199,13 +199,11 @@ function code_of(fn::Function; when_missing=warn)::CodeUpdate
                 return CodeUpdate()
             end
         end
-        function to_keep(expr0)
+        function to_keep(expr0, expr_mod)
             expr = strip_docstring(expr0)
             return is_function_definition(expr) &&
                 !is_call_definition(expr) &&
-                # FIXME: this `mod` isn't really right. We should go over
-                # the `rex` objects in code_of directly
-                get_function(mod, expr) == fn
+                get_function(expr_mod, expr) == fn
         end
         rcu = filter(to_keep, code_of(mod, file)::CodeUpdate)
         # count = length(only(rcu.revert.ecs)) # how many methods were updated
