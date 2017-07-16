@@ -1,4 +1,6 @@
-ENV["JULIA_REVISE"] = "manual"
+if !isdefined(Main, :Revise) && !haskey(ENV, "JULIA_REVISE")
+    ENV["JULIA_REVISE"] = "manual"   # FIXME; that's still not great
+end
 import Revise
 using Revise: ModDict, parse_source, RelocatableExpr
 
@@ -173,11 +175,12 @@ Base.show(io::IO, fail::MissingMethodFailure) =
 """ `parse_mod!` fills up Revise.file2modules for that module, and returns `nothing` """
 function parse_mod!(mod::Module)
     if module_parent(mod) !== Main
-        return parse_mod!(module_parent(mod))
-    end
-    if mod == Base
-        parse_source(Revise.sysimg_path, Main, dirname(Revise.sysimg_path))
-    else
+        parse_mod!(module_parent(mod))
+    elseif mod == Base
+        if !haskey(Revise.file2modules, Revise.sysimg_path)
+            parse_source(Revise.sysimg_path, Main, dirname(Revise.sysimg_path))
+        end
+    elseif !haskey(Revise.file2modules, module_definition_file(mod))
         Revise.parse_pkg_files(Symbol(mod)) # it's a side-effect of this function...
     end
     nothing
@@ -192,8 +195,7 @@ function code_of(fn::Union{Function, Type}; when_missing=warn)::CodeUpdate
             return CodeUpdate()
         end
         if !haskey(Revise.file2modules, file)
-            parse_mod!(mod) # FIXME: better logic? Currently could take a long time
-                            # should remember which mods have been parsed this way.
+            parse_mod!(mod)
             if !haskey(Revise.file2modules, file)
                 # Should fail somehow?
                 return CodeUpdate()
