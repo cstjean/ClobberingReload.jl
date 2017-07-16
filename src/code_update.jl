@@ -103,11 +103,6 @@ function is_function_definition(expr::Expr)
 end
 is_function_definition(::Any) = false
 
-""" `get_function(mod::Module, fundef::Expr)::Function` returns the `Function` which this
-`fundef` is defining. This code works only when the Function already exists. """
-get_function(mod::Module, fundef::Expr)::Union{Function, Type} =
-    eval(mod, splitdef(fundef)[:name])
-
 is_call_definition(fundef_di::Dict) = @capture(fundef_di[:name], (a_::b_) | (::b_))
 is_call_definition(fundef) = is_call_definition(splitdef(fundef))
 """ `is_fancy_constructor_definition(fundef)` is true for constructors that have both
@@ -187,6 +182,23 @@ function parse_mod!(mod::Module)
 end
 
 
+""" `get_function(mod::Module, fundef::Expr)::Function` returns the `Function` which this
+`fundef` is defining. This code works only when the Function already exists. """
+get_function_(mod::Module, fundef::Expr)::Union{Function, Type} =
+    eval(mod, splitdef(fundef)[:name])
+
+""" `get_function(mod, def)` returns the ::Function corresponding to `def` if there is
+one (and it's not a callable-object definition), otherwise returns `nothing` """
+function get_function(mod::Module, def)
+    expr = strip_docstring(def)
+    if is_function_definition(expr) &&
+        !is_call_definition(expr)
+        return get_function_(mod, expr)
+    else
+        return nothing
+    end
+end
+
 function code_of(fn::Union{Function, Type}; when_missing=warn)::CodeUpdate
     if when_missing in (false, nothing); when_missing = _->nothing end
     function process(mod, file, correct_count)
@@ -201,13 +213,8 @@ function code_of(fn::Union{Function, Type}; when_missing=warn)::CodeUpdate
                 return CodeUpdate()
             end
         end
-        function to_keep(expr0, expr_mod)
-            expr = strip_docstring(expr0)
-            return is_function_definition(expr) &&
-                !is_call_definition(expr) &&
-                get_function(expr_mod, expr) == fn
-        end
-        rcu = filter(to_keep, code_of(mod, file)::CodeUpdate)
+        rcu = filter((expr, expr_mod) -> get_function(expr_mod, expr) == fn,
+                     code_of(mod, file)::CodeUpdate)
         # count = length(only(rcu.revert.ecs)) # how many methods were updated
         # if count != correct_count
         #     when_missing(MissingMethodFailure(count, correct_count, fn, file))
