@@ -148,7 +148,7 @@ function code_of(included_file::String)::CodeUpdate
 end
 
 method_file_counts(fn_to_change) =
-    counter((mod, realpath(abspath(file)))
+    counter((mod, isa(file, AbstractString) ? realpath(abspath(file)): file)
             # The Set is so that we count methods that have the same file and line number.
             # (i.e. optional files, although it might catch macroexpansions too; not
             # sure if that's good or not)
@@ -212,7 +212,7 @@ function code_of(fn::Union{Function, Type}; when_missing=warn)::CodeUpdate
         # end
         rcu
     end
-    process(mod, file::Void, correct_count) =  CodeUpdate()  # no file info, no update!
+    process(mod, file::Void, correct_count) = CodeUpdate()  # no file info, no update!
     return merge((process(mod, file, correct_count)
                   for ((mod, file), correct_count) in method_file_counts(fn))...)
 end
