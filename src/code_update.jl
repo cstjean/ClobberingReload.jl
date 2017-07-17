@@ -70,8 +70,30 @@ immutable RevertibleCodeUpdate
     apply::CodeUpdate
     revert::CodeUpdate
 end
-RevertibleCodeUpdate(fn::Function, revert::CodeUpdate) =
-    RevertibleCodeUpdate(map((expr, mod)->fn(expr), revert), revert)
+function RevertibleCodeUpdate(fn::Function, current::CodeUpdate)
+    # Formerly defined as simply
+    #    RevertibleCodeUpdate(map((expr, mod)->fn(expr), revert), revert)
+    # but we want to get rid of the unmodified code in `set_revert`, so it got imperative.
+    md_apply = ModDict()
+    md_revert = ModDict()
+    for (mod, set_rex) in current.md
+        set_apply = Set{RelocatableExpr}()
+        set_revert = Set{RelocatableExpr}()
+        for rex in set_rex
+            apply_res = fn(convert(Expr, rex))
+            if apply_res !== nothing
+                push!(set_apply, MakeRelocatableExpr(apply_res))
+                push!(set_revert, rex)
+            end
+        end
+        if !isempty(set_apply)
+            md_apply[mod] = set_apply
+            md_revert[mod] = set_revert
+        end
+    end
+    return RevertibleCodeUpdate(CodeUpdate(md_apply), CodeUpdate(md_revert))
+end
+    
 EmptyRevertibleCodeUpdate() = RevertibleCodeUpdate(CodeUpdate(), CodeUpdate())
 Base.merge(rcu1::RevertibleCodeUpdate, rcus::RevertibleCodeUpdate...) =
     RevertibleCodeUpdate(merge((rcu.apply for rcu in (rcu1, rcus...))...),
