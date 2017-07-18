@@ -235,12 +235,13 @@ function code_of(fn::Union{Function, Type}; when_missing=warn)::CodeUpdate
                 return CodeUpdate()
             end
         end
-        rcu = filter((expr, expr_mod) -> get_function(expr_mod, expr) == fn,
+        count = 0  # how many methods were found
+        rcu = filter((expr, expr_mod) -> (get_function(expr_mod, expr) == fn ?
+                                          (count += 1; true) : false),
                      code_of(mod, file)::CodeUpdate)
-        # count = length(only(rcu.revert.ecs)) # how many methods were updated
-        # if count != correct_count
-        #     when_missing(MissingMethodFailure(count, correct_count, fn, file))
-        # end
+        if count != correct_count
+            when_missing(MissingMethodFailure(count, correct_count, fn, file))
+        end
         rcu
     end
     process(mod, file::Void, correct_count) = CodeUpdate()  # no file info, no update!
