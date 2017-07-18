@@ -10,12 +10,6 @@ export creload, creload_strip
 include("fundef.jl") # hopefully temporary
 include("scrub_stderr.jl")
 
-function only(collection)
-    @assert length(collection)==1 "only: `collection` was expected to contain one element; contains $(length(collection))"
-    return first(collection)
-end
-only(collection::Base.Generator) = only(collect(collection)) # could be better...
-
 
 """ `parse_file(filename)` returns the expressions in `filename` as a
 `Vector` of expressions """
@@ -177,7 +171,6 @@ else
     add_filename(lnn::LineNumberNode, file::Symbol) = LineNumberNode(lnn.line, file)
 end
 
-include("code_update.jl")
 include("autoreload.jl")
 
 end # module
