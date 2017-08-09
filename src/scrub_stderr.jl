@@ -4,13 +4,13 @@ export scrub_stderr, scrub_redefinition_warnings, no_warnings, sinclude
 
 # O nameless stranger, please improve my ailing regexes.
 redefinition_regexes =
-    [r"WARNING\: Method definition .* in module .* at .* overwritten at .*\n",
-     r"WARNING\: Method definition .* in module .* overwritten\.\n",
-     r"WARNING\: replacing docs for .*\n",
+    [r"WARNING\\: Method definition .* in module .* at .* overwritten at .*\n",
+     r"WARNING\\: Method definition .* in module .* overwritten\.\n",
+     r"WARNING\\: replacing docs for .*\n",
      # 0.6 updated its doc warnings with color. Looks like this:
      # \e[1m\e[33mWARNING: \e[39m\e[22m\e[33mreplacing
      r".*WARNING: .*replacing docs for .*\n",
-     r"WARNING\: redefining constant .*\n"]
+     r"WARNING\\: redefining constant .*\n"]
 
 
 """ `scrub_stderr(body::Function, pats::Regex...)` executes `body` without
