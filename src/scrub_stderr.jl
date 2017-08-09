@@ -16,7 +16,7 @@ redefinition_regexes =
 """ `scrub_stderr(body::Function, pats::Regex...)` executes `body` without
 outputting any warning that matches one of the `pats`.
 
-Pattern example: r"WARNING: redefining constant .*\n" """
+Pattern example: r"WARNING\\: redefining constant .*\n" """
 function scrub_stderr(body::Function, pats::Regex...)
     mktemp() do _, f
         old_stderr = STDERR
