@@ -7,9 +7,7 @@ using MacroTools: postwalk
 
 export creload, creload_strip
 
-include("fundef.jl") # hopefully temporary
 include("scrub_stderr.jl")
-
 
 """ `parse_file(filename)` returns the expressions in `filename` as a
 `Vector` of expressions """
