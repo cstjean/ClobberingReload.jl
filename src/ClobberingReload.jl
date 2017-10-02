@@ -42,7 +42,7 @@ function parse_module_file(fname::String)
             return modname, code
         end
     end
-    error("ClobberingReload error: Cannot parse $fname; must contain a module. Exception $e")
+    error("ClobberingReload error: Cannot parse $fname; must contain a module.")
 end
 
 is_typealias(expr) =
