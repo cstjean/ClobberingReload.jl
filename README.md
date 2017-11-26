@@ -1,3 +1,5 @@
+**IMPORTANT**: ClobberingReload.jl has been superseded by [Revise.jl](https://github.com/timholy/Revise.jl). Please consider using this package from 0.6 onward. ClobberingReload.jl is no longer actively developed (though pull requests are welcome).
+
 # ClobberingReload.jl
 
 [![Build Status](https://travis-ci.org/cstjean/ClobberingReload.jl.svg?branch=master)](https://travis-ci.org/cstjean/ClobberingReload.jl)
