@@ -7,9 +7,7 @@ using MacroTools: postwalk
 
 export creload, creload_strip
 
-include("fundef.jl") # hopefully temporary
 include("scrub_stderr.jl")
-
 
 """ `parse_file(filename)` returns the expressions in `filename` as a
 `Vector` of expressions """
@@ -44,7 +42,7 @@ function parse_module_file(fname::String)
             return modname, code
         end
     end
-    error("ClobberingReload error: Cannot parse $fname; must contain a module. Exception $e")
+    error("ClobberingReload error: Cannot parse $fname; must contain a module.")
 end
 
 is_typealias(expr) =
